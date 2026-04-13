@@ -1,0 +1,5 @@
+.DS_Store
+*.backup.*
+.context/
+__pycache__/
+.pytest_cache/

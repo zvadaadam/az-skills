@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Runs after git checkout / git switch — auto-installs any new skills
+"$(git rev-parse --show-toplevel)/scripts/install.sh"
