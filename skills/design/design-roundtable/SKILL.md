@@ -1,6 +1,6 @@
 ---
-name: design-explore
-description: Multi-persona design exploration with consensus. Spawns parallel sub-agents — each thinking like a legendary designer (Dieter Rams, Jony Ive, Massimo Vignelli, Naoto Fukasawa, Hella Jongerius) — to explore divergent directions for the same design brief, then synthesizes into a ranked consensus. Use when starting a new screen, component, or visual direction and you want breadth before committing.
+name: design-roundtable
+description: 5 legendary designers debate your brief in parallel using the most powerful AI model available. Spawns sub-agents as Dieter Rams, Jony Ive, Massimo Vignelli, Naoto Fukasawa, and Hella Jongerius — each explores independently, then synthesizes into a ranked consensus. Use when starting a new screen, component, or visual direction and you want breadth before committing.
 argument-hint: "[design brief — what you're designing and any constraints]"
 ---
 
@@ -46,7 +46,7 @@ Spawn **5 sub-agents in parallel** using the Task tool. Each agent receives:
 3. The .pen file path and any existing design system components
 4. Instructions to produce a concrete design direction (not just theory)
 
-Use `subagent_type: "general-purpose"` for all designers. Launch all 5 in a single message with parallel Task calls.
+Use `subagent_type: "general-purpose"` for all designers. Always use the most powerful model available for each sub-agent (e.g. `model: "opus"` in Claude Code, or the equivalent top-tier model in other agents). Launch all 5 in a single message with parallel Task calls.
 
 ### The 5 Designers
 

@@ -1,6 +1,6 @@
 ---
-name: eng-explore
-description: Multi-persona engineering exploration with consensus. Spawns parallel sub-agents — each thinking like a legendary software engineer (John Carmack, Rich Hickey, Sandi Metz, Linus Torvalds, Kent Beck) — to explore divergent implementation approaches for the same engineering problem, then synthesizes into a ranked consensus with the recommended path. Use when facing architectural decisions, non-obvious implementation choices, or when you want to stress-test an approach from multiple angles before committing.
+name: devs-roundtable
+description: 5 legendary engineers debate your problem in parallel using the most powerful AI model available. Spawns sub-agents as John Carmack, Rich Hickey, Sandi Metz, Linus Torvalds, and Kent Beck — each explores independently, then synthesizes into a ranked consensus. Use when facing architectural decisions, non-obvious implementation choices, or when you want to stress-test an approach from multiple angles before committing.
 argument-hint: "[engineering problem — what you're building, constraints, and context]"
 ---
 
@@ -55,7 +55,7 @@ Spawn **5 sub-agents in parallel** using the Task tool. Each agent receives:
 3. Relevant file paths and code context
 4. Instructions to produce a concrete implementation approach (not just theory)
 
-Use `subagent_type: "general-purpose"` for all engineers. Launch all 5 in a single message with parallel Task calls.
+Use `subagent_type: "general-purpose"` for all engineers. Always use the most powerful model available for each sub-agent (e.g. `model: "opus"` in Claude Code, or the equivalent top-tier model in other agents). Launch all 5 in a single message with parallel Task calls.
 
 ### The 5 Engineers
 

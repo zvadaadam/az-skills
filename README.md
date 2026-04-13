@@ -45,16 +45,19 @@ git pull
 ## What's inside
 
 ### Engineering
-- **eng-explore** — Explores a problem from the perspective of 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck), then builds consensus
+- **devs-roundtable** — 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then build consensus
 - **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up
 - **deslop** — Detects and removes AI-generated code slop (unnecessary abstractions, over-engineering, verbose patterns)
 
 ### Design
-- **design-explore** — Explores a design challenge from the perspective of 5 legendary designers (Rams, Ive, Vignelli, Fukasawa, Jongerius)
-- **name-explore** — Generates naming ideas using multiple creative approaches (linguistic analysis, cultural references, wordplay)
+- **design-roundtable** — 5 legendary designers (Rams, Ive, Vignelli, Fukasawa, Jongerius) debate your brief in parallel, then build consensus
+
+### Branding
+- **brand-name-explore** — Generates product/company names using multiple creative personas (Lexicon methodology, poet, linguist, culture hacker, futurist)
 
 ### DevOps
-- **greenlight** — Takes a PR, fixes CI failures, addresses review comments, and iterates until everything passes
+- **greenlight-pr** — Takes a PR, fixes CI failures, addresses review comments, and iterates until everything passes
 
 ### Productivity
+- **interview-me** — Interviews you about a plan or design until it has all the context to build the right thing
 - **ai-journal** — Observes how you work with AI and documents patterns, habits, and improvement ideas

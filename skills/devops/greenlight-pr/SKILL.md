@@ -1,5 +1,5 @@
 ---
-name: greenlight
+name: greenlight-pr
 description: Greenlight a PR — fix CI failures, triage review comments, iterate until green.
 argument-hint: "[PR number or URL]"
 ---

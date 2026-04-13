@@ -1,5 +1,5 @@
 ---
-name: name-explore
+name: brand-name-explore
 description: Multi-persona naming exploration with consensus. Spawns parallel sub-agents — each embodying a different naming philosophy (David Placek's Lexicon methodology, the Poet, the Linguist, the Culture Hacker, the Futurist) — to explore divergent naming directions for a product or company, then synthesizes into a ranked shortlist. Based on David Placek's naming framework (Lexicon Branding — Swiffer, BlackBerry, Impossible, Sonos, Pentium). Use when naming a product, company, feature, or brand and you want breadth, surprise, and strategic advantage before committing.
 argument-hint: "[product description — what it does, who it's for, what makes it different, and the ultimate benefit]"
 ---
@@ -121,7 +121,7 @@ Spawn **5 sub-agents in parallel** using the Agent tool. Each agent receives:
 3. Their specific naming persona and methodology
 4. Instructions to generate 30-50 raw names each, then narrow to their top 10
 
-Use `subagent_type: "general-purpose"` for all namers. Launch all 5 in a single message with parallel Agent calls.
+Use `subagent_type: "general-purpose"` for all namers. Always use the most powerful model available for each sub-agent (e.g. `model: "opus"` in Claude Code, or the equivalent top-tier model in other agents). Launch all 5 in a single message with parallel Agent calls.
 
 ### The Treasure Hunt Methodology
 
