@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>greenlight-pr</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+  }
+
+  .canvas {
+    width: 1200px;
+    height: 920px;
+    position: relative;
+    background: #FCFCFA;
+    overflow: hidden;
+  }
+
+  /* Background dots */
+  .canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, #e0e0e0 0.7px, transparent 0.7px);
+    background-size: 24px 24px;
+    opacity: 0.5;
+  }
+
+  /* SVG layer */
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .edge {
+    fill: none;
+    stroke: #D0D0D0;
+    stroke-width: 1.8;
+  }
+
+  .edge-accent {
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .edge-loop {
+    fill: none;
+    stroke: #7C3AED;
+    stroke-width: 2;
+    stroke-dasharray: 6 4;
+    opacity: 0.35;
+  }
+
+  /* Nodes */
+  .n {
+    position: absolute;
+    z-index: 2;
+    text-align: center;
+  }
+
+  /* Title */
+  .title {
+    position: absolute;
+    z-index: 2;
+    top: 24px;
+    left: 48px;
+  }
+
+  .title h1 {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: #111;
+  }
+
+  .title p {
+    font-size: 13px;
+    color: #999;
+  }
+
+  .badge {
+    position: absolute;
+    z-index: 2;
+    top: 32px;
+    right: 48px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+  .badge span { font-size: 12px; color: #bbb; font-weight: 500; }
+
+  /* ── Node styles ── */
+  .node-snap {
+    background: #0a0a0f;
+    color: #fff;
+    border-radius: 14px;
+    padding: 16px 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  }
+
+  .node-snap h3 { font-size: 14px; font-weight: 700; }
+  .node-snap p { font-size: 10px; color: #888; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  .node-q {
+    font-size: 11px;
+    font-weight: 600;
+    color: #bbb;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .node-act {
+    border-radius: 12px;
+    padding: 12px 16px;
+    text-align: left;
+    width: 150px;
+    border: 1.5px solid;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .node-act h4 {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 3px;
+  }
+
+  .node-act p {
+    font-size: 9.5px;
+    line-height: 1.45;
+    opacity: 0.6;
+  }
+
+  .n-fix    { background: #FFF5F5; border-color: #FECACA; } .n-fix h4 { color: #DC2626; }
+  .n-retry  { background: #FFFBEB; border-color: #FDE68A; } .n-retry h4 { color: #B45309; }
+  .n-triage { background: #FAF5FF; border-color: #DDD6FE; } .n-triage h4 { color: #7C3AED; }
+  .n-waitr  { background: #EFF6FF; border-color: #BFDBFE; } .n-waitr h4 { color: #2563EB; }
+  .n-waitc  { background: #F9FAFB; border-color: #E5E7EB; } .n-waitc h4 { color: #6B7280; }
+
+  .node-done {
+    background: #ECFDF5;
+    border: 2px solid #A7F3D0;
+    border-radius: 14px;
+    padding: 14px 24px;
+    box-shadow: 0 2px 12px rgba(34,197,94,0.1);
+  }
+
+  .node-done h4 { font-size: 13px; font-weight: 700; color: #059669; }
+  .node-done p { font-size: 10px; color: #6ee7b7; }
+
+  /* Triage expanded */
+  .node-triage-detail {
+    background: #fff;
+    border: 1.5px solid #E8E0F8;
+    border-radius: 14px;
+    padding: 18px 20px;
+    width: 520px;
+    text-align: left;
+    box-shadow: 0 4px 16px rgba(124,58,186,0.06);
+  }
+
+  .td-hdr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .td-badge {
+    background: #7C3AED;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  .td-hdr h3 { font-size: 14px; font-weight: 800; color: #1a1a2e; }
+
+  .td-phases {
+    display: flex;
+    gap: 0;
+  }
+
+  .td-ph {
+    flex: 1;
+    padding: 0 10px;
+  }
+
+  .td-ph:not(:last-child) { border-right: 1px solid #F0E8FF; }
+  .td-ph:first-child { padding-left: 0; }
+  .td-ph:last-child { padding-right: 0; }
+
+  .td-ph .pn {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .td-ph:nth-child(1) .pn { color: #7C3AED; }
+  .td-ph:nth-child(2) .pn { color: #2563EB; }
+  .td-ph:nth-child(3) .pn { color: #059669; }
+
+  .td-ph h5 { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+
+  .td-ph li {
+    font-size: 9.5px;
+    color: #777;
+    line-height: 1.7;
+    list-style: none;
+  }
+
+  /* Decision node */
+  .node-decision {
+    background: #0a0a0f;
+    border-radius: 12px;
+    padding: 14px 18px;
+    text-align: left;
+    width: 440px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+
+  .nd-title {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 8px;
+  }
+
+  .nd-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    line-height: 1.9;
+    color: #777;
+    white-space: nowrap;
+  }
+
+  .nk { color: #B8A8D8; }
+  .nf { color: #4ADE80; font-weight: 600; }
+  .nd { color: #F87171; font-weight: 600; }
+  .ne { color: #FBBF24; font-weight: 600; }
+  .na { color: #60A5FA; font-weight: 600; }
+  .nc { color: #3a3a50; }
+
+  /* Loop label */
+  .loop-label {
+    position: absolute;
+    z-index: 2;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #7C3AED;
+    opacity: 0.4;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  /* Bottom bots */
+  .bot-row {
+    position: absolute;
+    z-index: 2;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bot-row .bl { font-size: 10px; color: #ccc; margin-right: 2px; }
+  .bot-row .bp {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #aaa;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- Title -->
+  <div class="title">
+    <h1>greenlight-pr</h1>
+    <p>Drive a PR to green — fix CI, address reviews, iterate until merge-ready</p>
+  </div>
+  <div class="badge"><div class="dot"></div><span>az-skills</span></div>
+
+  <!-- ═══ SVG CONNECTIONS ═══ -->
+  <svg viewBox="0 0 1200 920">
+    <defs>
+      <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0,8 3,0 6" fill="#ccc"/>
+      </marker>
+      <marker id="ah-p" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0,8 3,0 6" fill="#7C3AED" opacity="0.5"/>
+      </marker>
+      <marker id="ah-g" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0,8 3,0 6" fill="#22c55e" opacity="0.5"/>
+      </marker>
+    </defs>
+
+    <!-- Snapshot → question -->
+    <line x1="420" y1="130" x2="420" y2="158" class="edge" marker-end="url(#ah)"/>
+
+    <!-- Question → each action (fan out) -->
+    <path d="M 420 180 C 420 210, 128 200, 128 230" class="edge" marker-end="url(#ah)"/>
+    <path d="M 420 180 C 420 210, 290 200, 290 230" class="edge" marker-end="url(#ah)"/>
+    <path d="M 420 180 C 420 205, 420 210, 420 230" class="edge" stroke="#DDD6FE" stroke-width="2" marker-end="url(#ah-p)"/>
+    <path d="M 420 180 C 420 210, 556 200, 556 230" class="edge" marker-end="url(#ah)"/>
+    <path d="M 420 180 C 420 210, 700 200, 700 230" class="edge" marker-end="url(#ah)"/>
+
+    <!-- Done branch (from question to done) -->
+    <path d="M 420 180 C 500 200, 850 180, 850 230" class="edge" stroke="#A7F3D0" stroke-width="2" marker-end="url(#ah-g)"/>
+
+    <!-- Triage → triage detail -->
+    <path d="M 420 340 L 420 380 C 420 400, 420 405, 520 420" class="edge-accent" stroke="#DDD6FE" stroke-width="1.8" marker-end="url(#ah-p)"/>
+
+    <!-- Triage detail → decision -->
+    <line x1="700" y1="590" x2="700" y2="620" class="edge-accent" stroke="#DDD6FE" stroke-width="1.5" marker-end="url(#ah-p)"/>
+
+    <!-- Decision → loop point -->
+    <line x1="700" y1="790" x2="700" y2="820" class="edge" marker-end="url(#ah)"/>
+
+    <!-- THE BIG LOOP BACK -->
+    <path d="M 130 340 C 50 340, 20 250, 20 175 C 20 120, 50 100, 310 100"
+          class="edge-loop" marker-end="url(#ah-p)"/>
+    <path d="M 290 340 C 190 380, 40 360, 20 300"
+          class="edge-loop"/>
+    <path d="M 556 340 C 700 380, 50 440, 30 300"
+          class="edge-loop"/>
+    <path d="M 700 340 C 780 380, 50 480, 25 310"
+          class="edge-loop"/>
+
+    <!-- Loop from decision back up -->
+    <path d="M 920 750 C 1050 750, 1100 400, 1100 175 C 1100 100, 1050 85, 530 100"
+          class="edge-loop" marker-end="url(#ah-p)"/>
+
+  </svg>
+
+  <!-- ═══ NODES ═══ -->
+
+  <!-- Snapshot -->
+  <div class="n" style="left:310px; top:88px;">
+    <div class="node-snap">
+      <h3>⚡ Snapshot the PR</h3>
+      <p>gl-snapshot.py → CI · comments · actions</p>
+    </div>
+  </div>
+
+  <!-- Question -->
+  <div class="n" style="left:370px; top:160px;">
+    <div class="node-q">what needs doing?</div>
+  </div>
+
+  <!-- Action nodes -->
+  <div class="n" style="left:53px; top:232px;">
+    <div class="node-act n-fix">
+      <h4>🔴 fix_ci</h4>
+      <p>CI broke — read logs, find the bug, fix it</p>
+    </div>
+  </div>
+
+  <div class="n" style="left:215px; top:232px;">
+    <div class="node-act n-retry">
+      <h4>🔄 retry_ci</h4>
+      <p>Flaky infra — retry jobs, 3× budget</p>
+    </div>
+  </div>
+
+  <div class="n" style="left:345px; top:232px;">
+    <div class="node-act n-triage">
+      <h4>💬 triage</h4>
+      <p>Bot commented — evaluate, fix or push back</p>
+    </div>
+  </div>
+
+  <div class="n" style="left:481px; top:232px;">
+    <div class="node-act n-waitr">
+      <h4>👁️ wait_review</h4>
+      <p>Bot reviewing — poll for comments</p>
+    </div>
+  </div>
+
+  <div class="n" style="left:625px; top:232px;">
+    <div class="node-act n-waitc">
+      <h4>⏳ wait_ci</h4>
+      <p>CI running — watch, re-snapshot</p>
+    </div>
+  </div>
+
+  <!-- Done -->
+  <div class="n" style="left:790px; top:232px;">
+    <div class="node-done">
+      <h4>✅ done</h4>
+      <p>merge-ready</p>
+    </div>
+  </div>
+
+  <!-- Triage detail -->
+  <div class="n" style="left:460px; top:410px;">
+    <div class="node-triage-detail">
+      <div class="td-hdr">
+        <span class="td-badge">Core</span>
+        <h3>Triage Process</h3>
+      </div>
+      <div class="td-phases">
+        <div class="td-ph">
+          <div class="pn">Phase 1</div>
+          <h5>Evaluate</h5>
+          <ul>
+            <li>Sub-agent per comment</li>
+            <li>Read code context</li>
+            <li>FIX / DISAGREE / DEFER</li>
+            <li>Confidence: H / M / L</li>
+          </ul>
+        </div>
+        <div class="td-ph">
+          <div class="pn">Phase 2</div>
+          <h5>Synthesize</h5>
+          <ul>
+            <li>Collect verdicts</li>
+            <li>Answer in context?</li>
+            <li>Surface decisions</li>
+            <li>Quality-check fixes</li>
+          </ul>
+        </div>
+        <div class="td-ph">
+          <div class="pn">Phase 3</div>
+          <h5>Act</h5>
+          <ul>
+            <li>Fix (one commit)</li>
+            <li>Reply to all comments</li>
+            <li>Post summary</li>
+            <li>Push → wait → loop</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision tree -->
+  <div class="n" style="left:480px; top:625px;">
+    <div class="node-decision">
+      <div class="nd-title">Per-Comment Decision</div>
+      <div class="nd-line"><span class="nk">for each</span> comment:</div>
+      <div class="nd-line">&nbsp;&nbsp;├─ <span class="nk">correct?</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;no → <span class="nd">DISAGREE</span> <span class="nc">// explain</span></div>
+      <div class="nd-line">&nbsp;&nbsp;├─ <span class="nk">actionable?</span> &nbsp;&nbsp;&nbsp;no → <span class="ne">DEFER</span> <span class="nc">// out of scope</span></div>
+      <div class="nd-line">&nbsp;&nbsp;├─ <span class="nk">workaround?</span> &nbsp;&nbsp;yes → <span class="nd">DISAGREE</span> <span class="nc">// real fix</span></div>
+      <div class="nd-line">&nbsp;&nbsp;├─ <span class="nk">complex?</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;yes → <span class="nd">DISAGREE</span> <span class="nc">// simpler</span></div>
+      <div class="nd-line">&nbsp;&nbsp;├─ <span class="nk">needs user?</span> &nbsp;&nbsp;&nbsp;yes → <span class="na">ASK</span> <span class="nc">// batch Qs</span></div>
+      <div class="nd-line">&nbsp;&nbsp;└─ else → <span class="nf">FIX</span> <span class="nc">// simplest change</span></div>
+    </div>
+  </div>
+
+  <!-- Loop labels -->
+  <div class="loop-label" style="left: 6px; top: 200px; writing-mode: vertical-rl; transform: rotate(180deg);">
+    push → re-snapshot ↺
+  </div>
+
+  <div class="loop-label" style="right: 36px; top: 350px; writing-mode: vertical-rl;">
+    push → CI → wait review → re-snapshot ↺
+  </div>
+
+  <!-- Bots -->
+  <div class="bot-row">
+    <span class="bl">auto-detects:</span>
+    <span class="bp">CodeRabbit</span>
+    <span class="bp">Graphite</span>
+    <span class="bp">Copilot</span>
+    <span class="bp">Sourcery</span>
+    <span class="bp">SonarCloud</span>
+    <span class="bp">Qodo</span>
+  </div>
+
+</div>
+</body>
+</html>
