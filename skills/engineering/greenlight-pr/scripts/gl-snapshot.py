@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gl-snapshot v3 — Greenlight PR snapshot tool.
+gl-snapshot — Greenlight PR snapshot tool.
 
 Single-call state gatherer for the greenlight skill. Returns structured JSON
 with CI status, review comments (with code context), failure classification,
@@ -11,7 +11,7 @@ Usage:
     python3 gl-snapshot.py 7                    # explicit PR number
     python3 gl-snapshot.py --mark-seen 123,456  # mark comment IDs as processed
     python3 gl-snapshot.py --retry-failed       # rerun failed CI jobs (budget: 3/SHA)
-    python3 gl-snapshot.py --wait-review        # poll until new bot review appears
+    python3 gl-snapshot.py --wait-comments      # poll until new comments appear
     python3 gl-snapshot.py --reset              # clear state for fresh start
 """
 
@@ -26,8 +26,8 @@ from pathlib import Path
 
 # ── Constants ──────────────────────────────────────────────
 
-BOT_PATTERNS = re.compile(
-    r"\[bot\]$|coderabbit|copilot|sonar|graphite|codex|openai"
+BOT_CHECK_PATTERNS = re.compile(
+    r"coderabbit|copilot|sonar|graphite|codex|openai"
     r"|ellipsis|bito|codeium|sourcery|codeguru|qodo|codescene",
     re.IGNORECASE,
 )
@@ -43,8 +43,8 @@ FLAKY_LOG_PATTERNS = [
 FLAKY_RE = re.compile("|".join(FLAKY_LOG_PATTERNS), re.IGNORECASE)
 
 MAX_FLAKY_RETRIES = 3
-REVIEW_POLL_INTERVAL = 30  # seconds
-REVIEW_POLL_TIMEOUT = 300  # 5 minutes
+POLL_INTERVAL = 30  # seconds
+POLL_TIMEOUT = 300  # 5 minutes
 
 
 # ── gh CLI helpers ─────────────────────────────────────────
@@ -95,9 +95,8 @@ def load_state(path):
         "processed_comment_ids": [],
         "retries_by_sha": {},
         "round": 0,
-        "reviewer_mode": None,
         "last_sha": None,
-        "bot_review_count": 0,
+        "last_comment_count": 0,
     }
 
 
@@ -121,7 +120,7 @@ def resolve_pr(pr_arg):
     if pr_arg:
         cmd.append(str(pr_arg))
     cmd.extend(["--json",
-        "number,url,state,headRefName,headRefOid,reviews,mergeStateStatus,reviewDecision"])
+        "number,url,state,headRefName,headRefOid,mergeStateStatus,reviewDecision"])
     data = gh_json(cmd)
     if not data:
         die("Could not resolve PR")
@@ -133,9 +132,6 @@ def resolve_pr(pr_arg):
         "sha": data.get("headRefOid", ""),
         "branch": data.get("headRefName", ""),
         "state": data.get("state", ""),
-        "merge_state": data.get("mergeStateStatus", ""),
-        "review_decision": data.get("reviewDecision", ""),
-        "reviews": data.get("reviews", []),
     }
 
 
@@ -150,6 +146,10 @@ def extract_repo(pr_url):
 
 # ── CI checks + failure diagnosis ──────────────────────────
 
+def is_bot_check(name):
+    return bool(BOT_CHECK_PATTERNS.search(name))
+
+
 def get_checks(pr_number, repo, head_sha):
     data = gh_json(["pr", "checks", str(pr_number),
                      "--json", "name,state,bucket,link,workflow"],
@@ -157,52 +157,45 @@ def get_checks(pr_number, repo, head_sha):
     if not data:
         data = []
 
-    passed, failed, pending = [], [], []
+    passed, failed, pending_ci, pending_bots = [], [], [], []
     for c in data:
         bucket = (c.get("bucket") or "").lower()
-        entry = {"name": c.get("name", ""), "link": c.get("link", "")}
+        name = c.get("name", "")
+        entry = {"name": name, "link": c.get("link", "")}
         if bucket == "fail":
             failed.append(entry)
         elif bucket == "pass":
             passed.append(entry)
+        elif is_bot_check(name):
+            pending_bots.append(entry)
         else:
-            pending.append(entry)
+            pending_ci.append(entry)
 
-    # For failed checks, fetch logs and classify
     if failed:
         failed = diagnose_failures(failed, repo, head_sha)
 
-    # Separate bot-reviewer checks (e.g. CodeRabbit) from real CI checks
-    pending_bots = [p for p in pending if BOT_PATTERNS.search(p.get("name", ""))]
-    pending_ci = [p for p in pending if not BOT_PATTERNS.search(p.get("name", ""))]
-
     return {
-        "passed_count": len(passed),
-        "failed_count": len(failed),
-        "pending_count": len(pending),
-        "pending_ci_count": len(pending_ci),
-        "pending_bot_count": len(pending_bots),
+        "passed": len(passed),
+        "failed": len(failed),
+        "pending_ci": len(pending_ci),
+        "pending_bots": [p["name"] for p in pending_bots],
         "all_green": len(failed) == 0 and len(pending_ci) == 0,
-        "failed": failed,
-        "pending_bots": [p.get("name", "") for p in pending_bots],
+        "failures": failed,
     }
 
 
 def diagnose_failures(failed_checks, repo, head_sha):
     """Fetch failed run logs, classify each as branch/flaky, attach excerpt."""
-    # Get workflow runs for this SHA
     runs_data = gh_json([
         "api", f"repos/{repo}/actions/runs",
         "-X", "GET", "-f", f"head_sha={head_sha}", "-f", "per_page=100"
     ], allow_fail=True)
     runs = (runs_data or {}).get("workflow_runs", [])
 
-    # Map workflow name → run_id for failed runs
     failed_run_map = {}
     for r in runs:
         if r.get("conclusion") in ("failure", "timed_out", "cancelled"):
-            name = r.get("name", "")
-            failed_run_map[name] = r.get("id")
+            failed_run_map[r.get("name", "")] = r.get("id")
 
     enriched = []
     for check in failed_checks:
@@ -213,9 +206,7 @@ def diagnose_failures(failed_checks, repo, head_sha):
             logs = gh(["run", "view", str(run_id), "--log-failed", "-R", repo],
                       allow_fail=True)
             if logs:
-                # Classify
                 entry["classification"] = "flaky" if FLAKY_RE.search(logs) else "branch"
-                # Attach last 30 lines as excerpt
                 lines = logs.strip().split("\n")
                 entry["log_excerpt"] = "\n".join(lines[-30:])
             else:
@@ -229,29 +220,10 @@ def diagnose_failures(failed_checks, repo, head_sha):
     return enriched
 
 
-# ── Bot detection ──────────────────────────────────────────
-
-def detect_reviewer_mode(reviews, checks=None):
-    """Detect BOT mode from posted reviews OR pending bot check names."""
-    for review in reviews:
-        login = review.get("author", {}).get("login", "")
-        if BOT_PATTERNS.search(login):
-            return "BOT"
-    # Also detect from pending checks — bot reviewers show as CI checks
-    # before they've posted their review (e.g. CodeRabbit "pending")
-    if checks and checks.get("pending_bot_count", 0) > 0:
-        return "BOT"
-    return "SELF"
-
-
-def count_bot_reviews(reviews):
-    return sum(1 for r in reviews
-               if BOT_PATTERNS.search(r.get("author", {}).get("login", "")))
-
-
 # ── Review comments with code context ──────────────────────
 
-def get_new_comments(repo, pr_number, processed_ids, self_login):
+def get_all_comments(repo, pr_number):
+    """Fetch all PR review comments (not issue comments)."""
     raw_text = gh(["api", "--paginate",
                    f"repos/{repo}/pulls/{pr_number}/comments"], allow_fail=True)
     if not raw_text:
@@ -260,8 +232,11 @@ def get_new_comments(repo, pr_number, processed_ids, self_login):
         raw = json.loads(raw_text)
     except json.JSONDecodeError:
         return []
-    if not isinstance(raw, list):
-        return []
+    return raw if isinstance(raw, list) else []
+
+
+def get_new_comments(repo, pr_number, processed_ids, self_login):
+    raw = get_all_comments(repo, pr_number)
 
     new = []
     for c in raw:
@@ -282,10 +257,8 @@ def get_new_comments(repo, pr_number, processed_ids, self_login):
             "line": c.get("line") or c.get("original_line"),
         }
 
-        # Attach code context: the diff hunk around the comment
         diff_hunk = c.get("diff_hunk", "")
         if diff_hunk:
-            # Last 5 lines of the hunk give the relevant context
             hunk_lines = diff_hunk.strip().split("\n")
             comment["code_context"] = "\n".join(hunk_lines[-8:])
 
@@ -307,14 +280,17 @@ def get_self_login():
 def recommend_actions(pr, checks, new_comments, state):
     if pr["state"] in ("CLOSED", "MERGED"):
         return ["stop_pr_closed"]
+
     actions = []
+
     if new_comments:
         actions.append("triage_comments")
-    if checks["failed_count"] > 0:
+
+    if checks["failed"] > 0:
         sha = pr["sha"]
         retries = state.get("retries_by_sha", {}).get(sha, 0)
         all_flaky = all(
-            f.get("classification") == "flaky" for f in checks["failed"]
+            f.get("classification") == "flaky" for f in checks["failures"]
         )
         if retries >= MAX_FLAKY_RETRIES:
             actions.append("stop_exhausted_retries")
@@ -322,15 +298,17 @@ def recommend_actions(pr, checks, new_comments, state):
             actions.append("retry_ci")
         else:
             actions.append("fix_ci")
-    # Pending real CI → wait for CI
-    if checks.get("pending_ci_count", 0) > 0 and not actions:
-        actions.append("wait_ci")
-    # Pending bot checks (e.g. CodeRabbit reviewing) → wait for review, not CI
-    if checks.get("pending_bot_count", 0) > 0 and not actions:
-        actions.append("wait_review")
-    if checks["all_green"] and not new_comments:
-        actions.append("done")
-    return actions if actions else ["wait_ci"]
+
+    if not actions:
+        # Nothing to fix/triage — what are we waiting on?
+        if checks["pending_ci"] > 0:
+            actions.append("wait_ci")
+        elif checks["pending_bots"]:
+            actions.append("wait_review")
+        elif checks["all_green"] and not new_comments:
+            actions.append("done")
+
+    return actions if actions else ["done"]
 
 
 # ── Retry failed jobs ──────────────────────────────────────
@@ -361,37 +339,39 @@ def retry_failed(pr, state, sp):
     return {"retried": True, "count": len(failed_ids), "retries_used": retries + 1}
 
 
-# ── Wait for bot re-review ─────────────────────────────────
+# ── Wait for new comments ─────────────────────────────────
 
-def wait_for_review(pr, state, sp, timeout=REVIEW_POLL_TIMEOUT):
-    """Poll until a new bot review appears or timeout."""
-    before_count = state.get("bot_review_count", 0)
+def wait_for_comments(pr, state, sp, timeout=POLL_TIMEOUT):
+    """Poll until new comments appear or timeout."""
+    before_count = state.get("last_comment_count", 0)
     start = time.time()
     poll = 0
 
     while time.time() - start < timeout:
         poll += 1
-        time.sleep(REVIEW_POLL_INTERVAL)
-        # Re-fetch PR to get updated reviews
-        fresh = resolve_pr(str(pr["number"]))
-        current_count = count_bot_reviews(fresh["reviews"])
+        time.sleep(POLL_INTERVAL)
+        all_comments = get_all_comments(pr["repo"], pr["number"])
+        # Count non-reply, non-self comments
+        self_login = get_self_login()
+        top_level = [c for c in all_comments
+                     if not c.get("in_reply_to_id")
+                     and (c.get("user") or {}).get("login", "") != self_login]
 
-        if current_count > before_count:
-            state["bot_review_count"] = current_count
+        if len(top_level) > before_count:
+            state["last_comment_count"] = len(top_level)
             save_state(sp, state)
-            # Now take a full snapshot to return
             return {
                 "waited": True,
                 "polls": poll,
                 "elapsed_seconds": int(time.time() - start),
-                "new_reviews": current_count - before_count,
+                "new_comments": len(top_level) - before_count,
             }
 
     return {
         "waited": True,
         "polls": poll,
         "elapsed_seconds": int(time.time() - start),
-        "new_reviews": 0,
+        "new_comments": 0,
         "timed_out": True,
     }
 
@@ -399,7 +379,7 @@ def wait_for_review(pr, state, sp, timeout=REVIEW_POLL_TIMEOUT):
 # ── Main snapshot ──────────────────────────────────────────
 
 def snapshot(pr_arg=None, mark_seen=None, do_retry=False,
-             do_reset=False, do_wait_review=False, wait_timeout=REVIEW_POLL_TIMEOUT):
+             do_reset=False, do_wait=False, wait_timeout=POLL_TIMEOUT):
     pr = resolve_pr(pr_arg)
     sp = state_path(pr["repo"], pr["number"])
     state = load_state(sp)
@@ -418,9 +398,8 @@ def snapshot(pr_arg=None, mark_seen=None, do_retry=False,
         result = retry_failed(pr, state, sp)
         return {"retry_result": result, "pr": {"number": pr["number"], "sha": pr["sha"][:8]}}
 
-    if do_wait_review:
-        wait_result = wait_for_review(pr, state, sp, timeout=wait_timeout)
-        # After waiting, take a fresh snapshot
+    if do_wait:
+        wait_result = wait_for_comments(pr, state, sp, timeout=wait_timeout)
         snap = _build_snapshot(pr, state, sp)
         snap["wait_result"] = wait_result
         return snap
@@ -430,16 +409,19 @@ def snapshot(pr_arg=None, mark_seen=None, do_retry=False,
 
 def _build_snapshot(pr, state, sp):
     checks = get_checks(pr["number"], pr["repo"], pr["sha"])
-
-    # Re-detect mode every snapshot — a bot may appear after first run
-    state["reviewer_mode"] = detect_reviewer_mode(pr["reviews"], checks)
-
-    state["last_sha"] = pr["sha"]
-    state["bot_review_count"] = count_bot_reviews(pr["reviews"])
     self_login = get_self_login()
     processed = set(str(x) for x in state.get("processed_comment_ids", []))
     new_comments = get_new_comments(pr["repo"], pr["number"], processed, self_login)
+
+    # Track total comment count for --wait-comments polling
+    all_comments = get_all_comments(pr["repo"], pr["number"])
+    top_level = [c for c in all_comments
+                 if not c.get("in_reply_to_id")
+                 and (c.get("user") or {}).get("login", "") != self_login]
+    state["last_comment_count"] = len(top_level)
+
     actions = recommend_actions(pr, checks, new_comments, state)
+    state["last_sha"] = pr["sha"]
     state["round"] = state.get("round", 0) + 1
     save_state(sp, state)
 
@@ -452,7 +434,6 @@ def _build_snapshot(pr, state, sp):
             "state": pr["state"],
         },
         "ci": checks,
-        "mode": state["reviewer_mode"],
         "round": state["round"],
         "new_comments": new_comments,
         "new_comment_count": len(new_comments),
@@ -470,13 +451,14 @@ def _build_snapshot(pr, state, sp):
 
 if __name__ == "__main__":
     import argparse
-    p = argparse.ArgumentParser(description="Greenlight PR snapshot v3")
+    p = argparse.ArgumentParser(description="Greenlight PR snapshot")
     p.add_argument("pr", nargs="?", help="PR number or URL")
     p.add_argument("--mark-seen", help="Comma-separated comment IDs")
     p.add_argument("--retry-failed", action="store_true", help="Rerun failed CI jobs")
-    p.add_argument("--wait-review", action="store_true", help="Poll until new bot review")
-    p.add_argument("--timeout", type=int, default=REVIEW_POLL_TIMEOUT,
-                   help="Timeout for --wait-review in seconds (default 300)")
+    p.add_argument("--wait-review", action="store_true",
+                    help="Poll until new comments appear (from bot re-review or human)")
+    p.add_argument("--timeout", type=int, default=POLL_TIMEOUT,
+                    help="Timeout for --wait-review in seconds (default 300)")
     p.add_argument("--reset", action="store_true", help="Clear state")
     args = p.parse_args()
     mark = args.mark_seen.split(",") if args.mark_seen else None

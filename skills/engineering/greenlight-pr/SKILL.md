@@ -23,7 +23,7 @@ Returns structured JSON: CI status, review comments (with code context), and rec
 | `7` | Explicit PR number |
 | `--mark-seen 123,456` | Mark comment IDs as processed |
 | `--retry-failed` | Rerun failed CI jobs (budget: 3/SHA) |
-| `--wait-review` | Poll until new bot review appears (timeout: 5min) |
+| `--wait-review` | Poll until new comments appear (timeout: 5min) |
 | `--timeout 120` | Custom timeout for `--wait-review` |
 | `--reset` | Clear state for fresh start |
 
@@ -57,12 +57,12 @@ loop:
   if "triage_comments" in actions:
     run TRIAGE PROCESS (see references/triage-process.md)
     push fixes
-    gl-snapshot.py --wait-review    # wait for bot to re-review
+    gl-snapshot.py --wait-review    # wait for new comments after push
     goto snapshot
 
   if "wait_review" in actions:
-    gl-snapshot.py --wait-review    # bot is reviewing (e.g. CodeRabbit pending)
-    goto snapshot                   # will have comments to triage after
+    gl-snapshot.py --wait-review    # bot still reviewing (e.g. CodeRabbit pending)
+    goto snapshot
 
   if "wait_ci" in actions:
     gh pr checks [PR] --watch --fail-fast

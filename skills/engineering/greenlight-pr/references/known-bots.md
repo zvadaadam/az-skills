@@ -1,6 +1,6 @@
 # Known AI Review Bots
 
-The snapshot script auto-detects these via login pattern matching. When any bot is detected, `mode` = `"BOT"`.
+The snapshot script auto-detects these via check name pattern matching. Bot checks are separated from real CI — a pending bot check triggers `wait_review` instead of `wait_ci`.
 
 ## Bot Catalog
 
@@ -46,4 +46,4 @@ always check: snapshot.new_comment_count > 0
 
 ## No bot detected
 
-If `mode` = `"SELF"`, there is no automated reviewer on this repo. Report to the user — they may want to set up CodeRabbit, Graphite, or similar. Do not attempt a self-review. Greenlight-pr drives PRs to green, it does not review code.
+If there are no bot checks and no review comments, the PR has no automated reviewer. The skill still works — it handles CI and any human review comments. Do not attempt a self-review. Greenlight-pr drives PRs to green, it does not review code.
