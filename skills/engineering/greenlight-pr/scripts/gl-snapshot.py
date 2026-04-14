@@ -174,11 +174,14 @@ def get_checks(pr_number, repo, head_sha):
     if failed:
         failed = diagnose_failures(failed, repo, head_sha)
 
+    passed_bots = [p["name"] for p in passed if is_bot_check(p["name"])]
+
     return {
         "passed": len(passed),
         "failed": len(failed),
         "pending_ci": len(pending_ci),
         "pending_bots": [p["name"] for p in pending_bots],
+        "passed_bots": passed_bots,
         "all_green": len(failed) == 0 and len(pending_ci) == 0,
         "failures": failed,
     }
@@ -306,7 +309,14 @@ def recommend_actions(pr, checks, new_comments, state):
         elif checks["pending_bots"]:
             actions.append("wait_review")
         elif checks["all_green"] and not new_comments:
-            actions.append("done")
+            # Race condition guard: bot check can pass before comments are indexed.
+            # If a bot check passed but we've never seen any comments, wait once.
+            has_bot_passed = bool(checks.get("passed_bots"))
+            ever_seen_comments = len(state.get("processed_comment_ids", [])) > 0
+            if has_bot_passed and not ever_seen_comments and state.get("round", 0) <= 1:
+                actions.append("wait_review")
+            else:
+                actions.append("done")
 
     return actions if actions else ["done"]
 
