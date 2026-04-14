@@ -6,9 +6,9 @@ argument-hint: "[PR number or URL]"
 
 # Greenlight PR
 
-Babysit a PR to merge-ready. Fix CI, triage AI code review comments, iterate until green.
+Shepherd a PR to merge-ready. Fix CI, triage AI code review comments, iterate until green.
 
-**You are the decision-maker, not the reviewer.** AI code review bots (CodeRabbit, Graphite, Codex, etc.) do the reviewing. Your job is to watch their feedback, decide what's worth fixing, fix it well, and keep iterating until the PR is clean.
+**You are the decision-maker, not the reviewer.** AI code review bots (CodeRabbit, Graphite, Codex, etc.) do the reviewing. Your job is to evaluate their feedback, decide what's worth fixing, fix it well, and keep iterating until the PR is clean.
 
 ## Tool
 
@@ -192,7 +192,7 @@ The snapshot script detects these automatically. When detected, `mode` = `"BOT"`
 | **CodeGuru** | `aws-codeguru-reviewer[bot]` | Security + concurrency focus. Java/Python. |
 | **CodeScene** | `codescene[bot]` | Code health via status checks (pass/fail), not inline reviews. |
 
-If no bot is detected (`mode` = `"SELF"`), the PR has no automated reviewer. Report this to the user — they may want to set one up. **Do not run a self-review.** Greenlight-pr is the babysitter, not the reviewer.
+If no bot is detected (`mode` = `"SELF"`), the PR has no automated reviewer. Report this to the user — they may want to set one up. **Do not run a self-review.** Greenlight-pr is the shepherd, not the reviewer.
 
 ## After every triage round
 
