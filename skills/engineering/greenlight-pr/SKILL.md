@@ -53,16 +53,36 @@ snapshot → read actions
   └─ done?         → report final state
 
 TRIAGE LOOP:
-  1. Read new_comments[].body + code_context
-  2. Spawn sub-agents to evaluate each comment (see Decision Process)
-  3. Build triage report: Fix / Disagree / Defer
-  4. Implement fixes (one commit, grouped)
-  5. Reply to every comment + post round summary
-  6. --mark-seen <ids>
-  7. Push
-  8. --wait-review → re-snapshot
-  9. New comments? → goto 1
-  10. No new comments + CI green → done
+  ┌─────────────────────────────────────────────────┐
+  │ PHASE 1: EVALUATE (sub-agents think in parallel) │
+  │ PHASE 2: REPORT   (synthesize into triage report)│
+  │ PHASE 3: ACT      (implement, reply, push)       │
+  │ PHASE 4: WAIT     (bot re-reviews, loop back)    │
+  └─────────────────────────────────────────────────┘
+
+  Phase 1 — Evaluate
+    Collect all new_comments
+    Spawn sub-agents in parallel (one per comment, or batched)
+    Each agent: read comment + code_context + surrounding code
+                → return verdict: FIX / DISAGREE / DEFER + reasoning
+
+  Phase 2 — Report
+    Synthesize sub-agent results into triage report
+    Review the report yourself — sub-agents may disagree with each other
+    Final call: which FIXes actually get implemented?
+
+  Phase 3 — Act
+    Implement fixes (one clean commit, grouped)
+    Reply to every comment (see triage-guide.md)
+    Post round summary as PR comment
+    --mark-seen <ids>
+    Push
+
+  Phase 4 — Wait & iterate
+    --wait-review → re-snapshot
+    New comments? → goto Phase 1
+    No new comments + CI green → done
+    3+ rounds of only nits/duplicates → done
 ```
 
 ### Bot re-review cycle
@@ -76,72 +96,84 @@ you push fix → bot posts new review → may add NEW comments
 
 **Always `--wait-review` after pushing, then re-snapshot.** Don't assume "approved" means no new comments. Bots often approve the overall PR but still leave new inline suggestions in the same pass.
 
-After 3+ rounds with only nit/duplicate comments, finish.
+## Triage Sub-Agents
 
-## Decision Process
+This is the core of greenlight-pr. Don't evaluate comments yourself inline — spawn sub-agents to think about each one independently, then synthesize.
 
-This is the core of greenlight-pr. For each batch of bot comments, decide what to do.
+### Sub-agent prompt template
 
-### Step 1: Classify each comment
-
-```
-for each comment:
-  read comment.body + comment.code_context
-  │
-  ├─ Is it technically correct?
-  │   no  → DISAGREE (explain with evidence)
-  │
-  ├─ Is it actionable in this branch?
-  │   no  → DEFER (acknowledge, explain scope)
-  │
-  ├─ Does fixing it conflict with the user's intent?
-  │   yes → DEFER (explain why we chose this approach)
-  │
-  ├─ Would the fix be a workaround or band-aid?
-  │   yes → think harder — find the RIGHT fix or DISAGREE
-  │
-  ├─ Would the fix add unnecessary complexity?
-  │   yes → DISAGREE (simpler is better unless there's a real bug)
-  │
-  └─ else → FIX
-```
-
-### Step 2: Validate fixes before implementing
+For each comment (or batch of related comments), spawn an agent with:
 
 ```
-for each FIX decision:
-  │
-  ├─ Is this a real bug or correctness issue?
-  │   yes → fix it, high priority
-  │
-  ├─ Is this a maintainability improvement?
-  │   yes → fix it if it's clean and simple
-  │
-  ├─ Is this a style/preference nit?
-  │   yes → skip unless trivial (rename, formatting)
-  │
-  ├─ Would this fix require touching unrelated code?
-  │   yes → DEFER instead
-  │
-  └─ Does this fix introduce more complexity than the issue it solves?
-      yes → DISAGREE instead
+You are evaluating an AI code review comment on a PR.
+
+COMMENT:
+{comment.body}
+
+CODE CONTEXT (diff hunk around the comment):
+{comment.code_context}
+
+FULL FILE (if needed, read it):
+{comment.path}
+
+YOUR TASK:
+1. Is the bot's claim technically correct? Verify against the actual code.
+2. If correct, is the suggested fix the RIGHT fix? Or would it be:
+   - A workaround / band-aid that hides a deeper issue?
+   - Over-engineered / unnecessarily complex?
+   - Touching unrelated code to satisfy the suggestion?
+3. If you'd fix it, what's the simplest correct fix?
+
+RESPOND WITH:
+- verdict: FIX | DISAGREE | DEFER
+- reasoning: 1-2 sentences why
+- fix_sketch: (only if FIX) what to change, in which file
+- confidence: HIGH | MEDIUM | LOW
 ```
 
-### Step 3: Quality check on the fix itself
+### Synthesizing the report
+
+After sub-agents return, build the triage report:
 
 ```
-before committing any fix:
+for each sub-agent result:
+  │
+  ├─ confidence HIGH + verdict FIX
+  │   → implement (high priority)
+  │
+  ├─ confidence MEDIUM + verdict FIX
+  │   → review the fix_sketch — does it pass the quality check?
+  │     yes → implement
+  │     no  → downgrade to DISAGREE or rethink the approach
+  │
+  ├─ confidence LOW + verdict FIX
+  │   → read the code yourself, make final call
+  │
+  ├─ verdict DISAGREE
+  │   → verify the reasoning, then reply with evidence
+  │
+  └─ verdict DEFER
+      → acknowledge in reply, explain scope
+```
+
+### Quality check on fixes (before committing)
+
+```
+for each fix about to be committed:
   │
   ├─ Is this the simplest correct fix?
   │   no  → simplify
   │
-  ├─ Does it introduce new abstractions?
+  ├─ Does it introduce new abstractions or indirection?
   │   yes → does the abstraction earn its keep? if not, inline it
   │
   ├─ Is it a workaround that hides the real problem?
-  │   yes → fix the real problem or DISAGREE
+  │   yes → fix the real problem or switch to DISAGREE
   │
-  └─ Would a senior engineer approve this in code review?
+  ├─ Does it add more complexity than the issue it solves?
+  │   yes → switch to DISAGREE
+  │
+  └─ Would a senior engineer approve this fix?
       no  → rethink
 ```
 
