@@ -26,7 +26,10 @@ from pathlib import Path
 
 # ── Constants ──────────────────────────────────────────────
 
-BOT_PATTERNS = re.compile(r"\[bot\]$|coderabbit|copilot|sonar", re.IGNORECASE)
+BOT_PATTERNS = re.compile(
+    r"\[bot\]$|coderabbit|copilot|sonar|graphite|codex|openai|ellipsis|bito|codeium",
+    re.IGNORECASE,
+)
 
 FLAKY_LOG_PATTERNS = [
     r"timed?\s*out", r"ETIMEDOUT", r"ECONNRESET", r"ECONNREFUSED",
@@ -148,7 +151,8 @@ def extract_repo(pr_url):
 
 def get_checks(pr_number, repo, head_sha):
     data = gh_json(["pr", "checks", str(pr_number),
-                     "--json", "name,state,bucket,link,workflow"])
+                     "--json", "name,state,bucket,link,workflow"],
+                    allow_fail=True)
     if not data:
         data = []
 

@@ -6,15 +6,17 @@ argument-hint: "[PR number or URL]"
 
 # Greenlight PR
 
-Shepherd a PR to merge-ready: CI green + reviews addressed.
+Babysit a PR to merge-ready. Fix CI, triage AI code review comments, iterate until green.
+
+**You are the decision-maker, not the reviewer.** AI code review bots (CodeRabbit, Graphite, Codex, etc.) do the reviewing. Your job is to watch their feedback, decide what's worth fixing, fix it well, and keep iterating until the PR is clean.
 
 ## Tool
 
 ```bash
-python3 ~/.claude/skills/greenlight/scripts/gl-snapshot.py [PR]
+python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py [PR]
 ```
 
-One call returns structured JSON: CI status (with failure classification + log excerpts), review comments (with diff hunk context), reviewer mode, and recommended `actions`.
+One call returns structured JSON: CI status (with failure classification + log excerpts), review comments (with diff hunk context), and recommended `actions`.
 
 State persists in `/tmp/gl-{repo}-pr{N}.json` — survives context compression.
 
@@ -33,7 +35,7 @@ State persists in `/tmp/gl-{repo}-pr{N}.json` — survives context compression.
 |--------|---------|
 | `fix_ci` | Failed checks diagnosed as branch-related — fix using `log_excerpt` + `classification` |
 | `retry_ci` | All failures classified as flaky — `--retry-failed` (budget: 3) |
-| `triage_comments` | New comments with `code_context` attached — triage per `references/triage-guide.md` |
+| `triage_comments` | New bot comments with `code_context` — triage per decision process below |
 | `wait_ci` | `gh pr checks <pr> --watch --fail-fast`, then re-snapshot |
 | `done` | CI green + no new comments → report final state |
 | `stop_pr_closed` | PR merged/closed → stop |
@@ -42,54 +44,157 @@ State persists in `/tmp/gl-{repo}-pr{N}.json` — survives context compression.
 ## Workflow
 
 ```
-1. Snapshot  →  read actions
-2. fix_ci?   →  check failed[].classification + log_excerpt, fix, commit, push
-   retry_ci? →  --retry-failed
-3. triage?   →  read new_comments[].body + code_context, triage, fix, reply, --mark-seen
-4. wait_ci?  →  gh pr checks --watch, re-snapshot
-5. Push?     →  BOT: --wait-review then re-snapshot
-              SELF: just re-snapshot
-6. done?     →  report final state
+snapshot → read actions
+  │
+  ├─ fix_ci?       → read failed[].classification + log_excerpt → fix → commit → push
+  ├─ retry_ci?     → --retry-failed
+  ├─ triage?       → TRIAGE LOOP (see below)
+  ├─ wait_ci?      → gh pr checks --watch → re-snapshot
+  └─ done?         → report final state
+
+TRIAGE LOOP:
+  1. Read new_comments[].body + code_context
+  2. Spawn sub-agents to evaluate each comment (see Decision Process)
+  3. Build triage report: Fix / Disagree / Defer
+  4. Implement fixes (one commit, grouped)
+  5. Reply to every comment + post round summary
+  6. --mark-seen <ids>
+  7. Push
+  8. --wait-review → re-snapshot
+  9. New comments? → goto 1
+  10. No new comments + CI green → done
 ```
 
-### CI failures come pre-diagnosed
+### Bot re-review cycle
 
-Each failed check includes `classification` ("branch" or "flaky") and `log_excerpt` (last 30 lines). No need to manually run `gh run view --log-failed` — the script already did it.
+AI review bots re-review after each push. The pattern:
 
-### Comments come with code context
-
-Each comment includes `code_context` — the diff hunk around the commented line. Triage without reading the full file first.
-
-### BOT mode: wait for re-review
-
-After pushing, use `--wait-review` instead of manual sleep loops:
-```bash
-python3 gl-snapshot.py --wait-review
 ```
-Polls every 30s, returns snapshot when new bot review appears (or times out at 5min).
+you push fix → bot posts new review → may add NEW comments
+                                      even if status = "approved"
+```
 
-### SELF mode: self-review once
+**Always `--wait-review` after pushing, then re-snapshot.** Don't assume "approved" means no new comments. Bots often approve the overall PR but still leave new inline suggestions in the same pass.
 
-See `references/self-review.md` for agent prompts. Spawn 3 agents (correctness, API, architecture) on the full diff. Triage findings, fix, push. No re-review needed after.
+After 3+ rounds with only nit/duplicate comments, finish.
+
+## Decision Process
+
+This is the core of greenlight-pr. For each batch of bot comments, decide what to do.
+
+### Step 1: Classify each comment
+
+```
+for each comment:
+  read comment.body + comment.code_context
+  │
+  ├─ Is it technically correct?
+  │   no  → DISAGREE (explain with evidence)
+  │
+  ├─ Is it actionable in this branch?
+  │   no  → DEFER (acknowledge, explain scope)
+  │
+  ├─ Does fixing it conflict with the user's intent?
+  │   yes → DEFER (explain why we chose this approach)
+  │
+  ├─ Would the fix be a workaround or band-aid?
+  │   yes → think harder — find the RIGHT fix or DISAGREE
+  │
+  ├─ Would the fix add unnecessary complexity?
+  │   yes → DISAGREE (simpler is better unless there's a real bug)
+  │
+  └─ else → FIX
+```
+
+### Step 2: Validate fixes before implementing
+
+```
+for each FIX decision:
+  │
+  ├─ Is this a real bug or correctness issue?
+  │   yes → fix it, high priority
+  │
+  ├─ Is this a maintainability improvement?
+  │   yes → fix it if it's clean and simple
+  │
+  ├─ Is this a style/preference nit?
+  │   yes → skip unless trivial (rename, formatting)
+  │
+  ├─ Would this fix require touching unrelated code?
+  │   yes → DEFER instead
+  │
+  └─ Does this fix introduce more complexity than the issue it solves?
+      yes → DISAGREE instead
+```
+
+### Step 3: Quality check on the fix itself
+
+```
+before committing any fix:
+  │
+  ├─ Is this the simplest correct fix?
+  │   no  → simplify
+  │
+  ├─ Does it introduce new abstractions?
+  │   yes → does the abstraction earn its keep? if not, inline it
+  │
+  ├─ Is it a workaround that hides the real problem?
+  │   yes → fix the real problem or DISAGREE
+  │
+  └─ Would a senior engineer approve this in code review?
+      no  → rethink
+```
+
+## Known AI Review Bots
+
+The snapshot script detects these automatically. When detected, `mode` = `"BOT"`.
+
+| Bot | GitHub login pattern | How it works |
+|-----|---------------------|--------------|
+| **CodeRabbit** | `coderabbitai[bot]` | Posts PR summary + inline comments. Re-reviews on push. Uses GitHub review status. |
+| **Graphite Reviewer** | `graphite-app[bot]` | Inline comments + summary. Re-reviews automatically. |
+| **Copilot** | `copilot[bot]` | GitHub-native review. Inline suggestions. |
+| **SonarCloud** | `sonarcloud[bot]` | Quality gate status check + inline comments on new issues. |
+| **Codex / OpenAI** | `openai-codex[bot]` | Inline review comments. |
+
+If no bot is detected (`mode` = `"SELF"`), the PR has no automated reviewer. Report this to the user — they may want to set one up. **Do not run a self-review.** Greenlight-pr is the babysitter, not the reviewer.
 
 ## After every triage round
 
 ```bash
+# 1. Reply to each comment individually
+gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies \
+  -f body="Fixed — <description>. See <commit>"
+
+# 2. Post round summary
+gh pr comment <pr> --body '## Greenlight — Round N
+**Fixed (X):** brief list
+**Disagreed (X):** brief reasoning
+**Deferred (X):** brief reasoning'
+
+# 3. Mark as processed
 python3 gl-snapshot.py --mark-seen <ids>
-# Reply to each comment (see references/triage-guide.md)
-# Post round summary as PR comment
 ```
+
+## CI failures come pre-diagnosed
+
+Each failed check includes `classification` ("branch" or "flaky") and `log_excerpt` (last 30 lines). See `references/ci-classification.md` for the heuristics.
+
+## Comments come with code context
+
+Each comment includes `code_context` — the diff hunk around the commented line. Triage without reading the full file first.
 
 ## Guardrails
 
-- Think before fixing. Don't blindly apply every suggestion.
-- BOT mode: use `--wait-review` after every push. Don't skip.
-- ALWAYS reply to inline comments AND post top-level summary.
-- After 3+ rounds with only duplicate/nit comments, finish.
-- If a comment needs a product decision, stop and ask user.
+- **Think before fixing.** Don't blindly apply every bot suggestion.
+- **No workarounds.** If you can't fix it properly, disagree or defer.
+- **No over-engineering.** Bot suggestions that add complexity without solving real problems should be pushed back on.
+- **Always reply.** Every inline comment gets a reply. Every round gets a summary.
+- **Wait for re-review.** After every push, `--wait-review` then re-snapshot. Don't skip.
+- **Know when to stop.** After 3+ rounds with only nit/duplicate comments, finish.
+- **Escalate when needed.** If a comment needs a product decision, stop and ask the user.
 
 ## References
 
 - `references/ci-classification.md` — Branch vs flaky heuristics
-- `references/triage-guide.md` — Triage process, reply templates, agreement criteria
-- `references/self-review.md` — Sub-agent prompts for SELF mode review
+- `references/triage-guide.md` — Reply templates and agreement criteria
