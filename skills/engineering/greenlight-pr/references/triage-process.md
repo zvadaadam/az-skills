@@ -39,18 +39,53 @@ RESPOND AS JSON:
 }
 ```
 
-## Phase 2: Synthesize
+## Phase 2: Synthesize + surface decisions
 
-Collect all sub-agent results. Make the final call:
+Collect all sub-agent results. Before implementing anything, check if you need human input.
 
 ```
 triage_report = []
+questions_for_user = []
 
 for each result in sub_agent_results:
 
+  # ── First: can I resolve this myself? ──────────────
+  if result needs a judgment call:
+    answer = check_existing_context(
+      conversation_history,   # user may have already said their intent
+      pr_description,         # PR body often explains the "why"
+      code_comments,          # inline comments in the code itself
+    )
+    if answer found:
+      use answer, continue    # don't ask what's already known
+
+  # ── Collect questions I genuinely can't answer ─────
+  if result.verdict == "FIX" and fix_requires_product_decision(result):
+    # e.g. "should this fail silently or surface to user?"
+    questions_for_user.append({
+      comment_id: result.comment_id,
+      question: describe_the_tradeoff(result)
+    })
+    continue  # don't decide yet — wait for answer
+
+  if two sub-agents conflict on the same area:
+    # e.g. one says simplify, another says make extensible
+    questions_for_user.append({
+      comment_ids: [a.comment_id, b.comment_id],
+      question: "these pull in different directions — which do you prefer?"
+    })
+    continue
+
+  if result.fix_sketch would open a bigger refactor:
+    questions_for_user.append({
+      comment_id: result.comment_id,
+      question: "the right fix here goes beyond this PR — want to go there?"
+    })
+    continue
+
+  # ── Route by confidence ────────────────────────────
   if result.verdict == "FIX":
     if result.confidence == "HIGH":
-      # trusted — implement as-is
       triage_report.append({
         action: "FIX",
         comment_id: result.comment_id,
@@ -58,28 +93,49 @@ for each result in sub_agent_results:
       })
 
     elif result.confidence == "MEDIUM":
-      # verify the fix passes quality check
       if quality_check(result.fix_sketch) == PASS:
         triage_report.append({ action: "FIX", ... })
       else:
-        # fix doesn't meet bar — rethink or disagree
         triage_report.append({ action: "DISAGREE", reason: "fix would be worse than the issue" })
 
     elif result.confidence == "LOW":
-      # don't trust — read the code yourself, make final call
       my_verdict = read_code_and_decide(result)
       triage_report.append(my_verdict)
 
   elif result.verdict == "DISAGREE":
-    # verify the reasoning is solid before replying
     if reasoning_holds_up(result.reasoning):
       triage_report.append({ action: "DISAGREE", reason: result.reasoning })
     else:
-      # agent was wrong to disagree — re-evaluate as potential FIX
       re_evaluate(result)
 
   elif result.verdict == "DEFER":
     triage_report.append({ action: "DEFER", reason: result.reasoning })
+
+# ── Ask user if needed (batched, not one at a time) ──
+if questions_for_user:
+  present all questions to user in one message
+  wait for answers
+  use answers to resolve the pending items
+  append resolved items to triage_report
+```
+
+### What counts as a question worth asking
+
+```
+def should_ask_user(result):
+  # YES — real decisions that need human judgment:
+  #   "should this error be silent or visible?"
+  #   "do you want extensibility or simplicity here?"
+  #   "this fix opens a bigger refactor — worth it?"
+  #   "two suggestions conflict — which direction?"
+
+  # NO — things you can figure out yourself:
+  #   "what does this function return?" → read the code
+  #   "is this variable used?" → grep for it
+  #   "what framework is this?" → obvious from imports
+  #   anything answerable from code, PR description, or conversation context
+
+  return requires_human_judgment_about_intent_or_direction(result)
 ```
 
 ### quality_check(fix_sketch)
@@ -171,13 +227,16 @@ python3 gl-snapshot.py --mark-seen <comma-separated-ids>
 
 ```
 if round >= 3:
-  new_comments = only_nits_or_duplicates(snapshot.new_comments)
-  if new_comments:
-    stop — reply "Acknowledged" to remaining nits, report to user
+  if all new comments are nits or duplicates of already-addressed issues:
+    reply "Acknowledged" to remaining nits
+    stop — report final state to user
 
-if any comment requires a product/design decision:
-  stop — ask the user
+if user answered questions and all items are resolved:
+  proceed to Act — no need to stop
 
-if any comment is ambiguous and could be interpreted multiple ways:
-  stop — ask the user
+if user says "that's enough" or "ship it":
+  stop — respect the call
+
+if bot keeps re-raising the same point after you disagreed:
+  reply once more with reasoning, then stop — don't loop forever
 ```
