@@ -1,29 +1,55 @@
 # CI Failure Classification
 
-## Branch-Related (fix locally, commit, push)
+## Decision pseudocode
 
-The failure is caused by code in the PR branch:
+```
+def classify_failure(check):
+  logs = check.log_excerpt
 
-- Compile/typecheck/lint failures in files touched by the branch
+  if logs mention files or modules YOU changed:
+    return "branch"  # your code broke it — fix locally
+
+  if logs match any flaky pattern:
+    # timeout, DNS, 429, 502, 503, runner provisioning,
+    # registry error, infrastructure outage
+    return "flaky"   # transient — retry
+
+  if logs mention test failures in code you didn't touch:
+    return "flaky"   # unrelated test — retry
+
+  if unclear:
+    read the full logs manually (gh run view <run-id> --log-failed)
+    make a call
+
+  return classification
+```
+
+## What to do
+
+```
+if all failures are "flaky":
+  gl-snapshot.py --retry-failed
+  # budget: 3 retries per SHA, then stop and ask user
+
+if any failure is "branch":
+  read the log_excerpt
+  find the root cause in your code
+  fix it — commit — push
+  # do NOT retry branch failures, they will fail again
+```
+
+## Branch-related signals
+
+- Compile / typecheck / lint errors in files touched by the branch
 - Deterministic test failures in changed areas
 - Snapshot output changes caused by UI/text modifications
 - Static analysis violations introduced by the latest push
-- Build script/config changes in the PR causing a deterministic failure
+- Build config changes in the PR causing deterministic failure
 
-## Flaky / Infrastructure (retry with `--retry-failed`)
+## Flaky / infrastructure signals
 
-The failure is transient or external to the branch:
-
-- DNS/network/registry timeout errors while fetching dependencies
+- DNS / network / registry timeout errors
 - Runner image provisioning or startup failures
-- GitHub Actions infrastructure/service outages
-- Cloud/service rate limits or transient API errors (429, 502, 503)
-- Non-deterministic failures in unrelated integration tests
-
-## Decision Tree
-
-1. Read the failed logs: `gh run view <run-id> --log-failed`
-2. If logs mention files/modules YOU changed → **branch-related** → fix it
-3. If logs mention timeouts, DNS, provisioning, rate limits → **flaky** → retry
-4. If unclear → inspect once manually, then decide
-5. After 3 retries on the same SHA → stop and report to user
+- GitHub Actions service outages
+- Rate limits or transient API errors (429, 502, 503)
+- Non-deterministic failures in unrelated tests
