@@ -57,8 +57,9 @@ loop:
   if "triage_comments" in actions:
     run TRIAGE PROCESS (see references/triage-process.md)
     push fixes
-    gl-snapshot.py --wait-review    # wait for new comments after push
-    goto snapshot
+    gh pr checks [PR] --watch --fail-fast   # wait for CI first
+    gl-snapshot.py --wait-review             # then wait for bot re-review
+    goto snapshot                            # fresh snapshot picks up new comments
 
   if "wait_review" in actions:
     gl-snapshot.py --wait-review    # bot still reviewing (e.g. CodeRabbit pending)
@@ -71,6 +72,53 @@ loop:
   if "done" in actions:
     return "CI green, no new comments — merge-ready"
 ```
+
+## Happy Path Example
+
+Concrete commands for the most common flow: bot posts comments → triage → fix → re-review.
+
+```bash
+# 1. Snapshot
+python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py 42
+# → actions: ["triage_comments"], new_comments: [{id: "123", body: "...", code_context: "..."}]
+
+# 2. Triage (see references/triage-process.md)
+#    Read comments, spawn sub-agents, decide FIX/DISAGREE/DEFER
+#    Fix the code...
+
+# 3. Commit and push
+git add -A && git commit -m "Address review: fix X, Y" && git push
+
+# 4. Reply to each comment
+gh api repos/owner/repo/pulls/42/comments/123/replies -f body="Fixed — description. See abc1234"
+
+# 5. Post round summary
+gh pr comment 42 --body "## Greenlight — Round 1
+**Fixed (2):** X, Y
+**Disagreed (1):** Z — reasoning"
+
+# 6. Mark as seen
+python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py --mark-seen 123,456,789
+
+# 7. Wait for bot re-review, then re-snapshot
+gh pr checks 42 --watch --fail-fast
+python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py --wait-review
+python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py 42
+# → new round: check actions again
+```
+
+## What counts as a comment
+
+The snapshot only returns **inline review comments** with `code_context` (the diff hunk). It ignores:
+- Big walkthrough/summary comments that bots post at the top of the PR
+- Issue-level comments (not attached to a line of code)
+- Your own replies
+
+If CodeRabbit auto-marks a comment as "Addressed in commit X", you don't need to reply again unless you want an audit trail.
+
+## Recovery after interruption
+
+State persists in `/tmp/gl-{repo}-pr{N}.json`. If a session is interrupted, just re-run the snapshot — it picks up where you left off with all processed comment IDs intact.
 
 ## Triage Process (overview)
 
