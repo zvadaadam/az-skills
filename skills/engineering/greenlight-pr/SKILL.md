@@ -151,11 +151,14 @@ The snapshot script detects these automatically. When detected, `mode` = `"BOT"`
 
 | Bot | GitHub login pattern | How it works |
 |-----|---------------------|--------------|
-| **CodeRabbit** | `coderabbitai[bot]` | Posts PR summary + inline comments. Re-reviews on push. Uses GitHub review status. |
-| **Graphite Reviewer** | `graphite-app[bot]` | Inline comments + summary. Re-reviews automatically. |
-| **Copilot** | `copilot[bot]` | GitHub-native review. Inline suggestions. |
-| **SonarCloud** | `sonarcloud[bot]` | Quality gate status check + inline comments on new issues. |
-| **Codex / OpenAI** | `openai-codex[bot]` | Inline review comments. |
+| **CodeRabbit** | `coderabbitai[bot]` | PR summary + inline comments. Re-reviews on push. Resolves its own outdated comments. |
+| **Graphite** | `graphite-app[bot]` | Inline comments + summary. Re-reviews automatically. |
+| **Copilot Review** | `copilot-pull-request-review[bot]` | GitHub-native. Must re-request review after push. |
+| **Sourcery** | `sourcery-ai[bot]` | Inline suggestions + quality score. Can APPROVE or REQUEST_CHANGES (rare — most bots only COMMENT). |
+| **SonarCloud** | `sonarcloud[bot]` | Quality gate status check + inline comments. |
+| **Qodo / PR-Agent** | `qodo-merge-pro[bot]` | PR descriptions, review comments, test generation. Trigger with `/review`. |
+| **CodeGuru** | `aws-codeguru-reviewer[bot]` | Security + concurrency focus. Java/Python. |
+| **CodeScene** | `codescene[bot]` | Code health via status checks (pass/fail), not inline reviews. |
 
 If no bot is detected (`mode` = `"SELF"`), the PR has no automated reviewer. Report this to the user — they may want to set one up. **Do not run a self-review.** Greenlight-pr is the babysitter, not the reviewer.
 

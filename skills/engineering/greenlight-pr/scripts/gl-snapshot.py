@@ -27,7 +27,8 @@ from pathlib import Path
 # ── Constants ──────────────────────────────────────────────
 
 BOT_PATTERNS = re.compile(
-    r"\[bot\]$|coderabbit|copilot|sonar|graphite|codex|openai|ellipsis|bito|codeium",
+    r"\[bot\]$|coderabbit|copilot|sonar|graphite|codex|openai"
+    r"|ellipsis|bito|codeium|sourcery|codeguru|qodo|codescene",
     re.IGNORECASE,
 )
 
