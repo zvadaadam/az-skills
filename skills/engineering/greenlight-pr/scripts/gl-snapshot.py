@@ -172,12 +172,19 @@ def get_checks(pr_number, repo, head_sha):
     if failed:
         failed = diagnose_failures(failed, repo, head_sha)
 
+    # Separate bot-reviewer checks (e.g. CodeRabbit) from real CI checks
+    pending_bots = [p for p in pending if BOT_PATTERNS.search(p.get("name", ""))]
+    pending_ci = [p for p in pending if not BOT_PATTERNS.search(p.get("name", ""))]
+
     return {
         "passed_count": len(passed),
         "failed_count": len(failed),
         "pending_count": len(pending),
-        "all_green": len(failed) == 0 and len(pending) == 0,
+        "pending_ci_count": len(pending_ci),
+        "pending_bot_count": len(pending_bots),
+        "all_green": len(failed) == 0 and len(pending_ci) == 0,
         "failed": failed,
+        "pending_bots": [p.get("name", "") for p in pending_bots],
     }
 
 
@@ -224,11 +231,16 @@ def diagnose_failures(failed_checks, repo, head_sha):
 
 # ── Bot detection ──────────────────────────────────────────
 
-def detect_reviewer_mode(reviews):
+def detect_reviewer_mode(reviews, checks=None):
+    """Detect BOT mode from posted reviews OR pending bot check names."""
     for review in reviews:
         login = review.get("author", {}).get("login", "")
         if BOT_PATTERNS.search(login):
             return "BOT"
+    # Also detect from pending checks — bot reviewers show as CI checks
+    # before they've posted their review (e.g. CodeRabbit "pending")
+    if checks and checks.get("pending_bot_count", 0) > 0:
+        return "BOT"
     return "SELF"
 
 
@@ -301,7 +313,6 @@ def recommend_actions(pr, checks, new_comments, state):
     if checks["failed_count"] > 0:
         sha = pr["sha"]
         retries = state.get("retries_by_sha", {}).get(sha, 0)
-        # Check if all failures are flaky
         all_flaky = all(
             f.get("classification") == "flaky" for f in checks["failed"]
         )
@@ -311,8 +322,12 @@ def recommend_actions(pr, checks, new_comments, state):
             actions.append("retry_ci")
         else:
             actions.append("fix_ci")
-    if checks["pending_count"] > 0 and not actions:
+    # Pending real CI → wait for CI
+    if checks.get("pending_ci_count", 0) > 0 and not actions:
         actions.append("wait_ci")
+    # Pending bot checks (e.g. CodeRabbit reviewing) → wait for review, not CI
+    if checks.get("pending_bot_count", 0) > 0 and not actions:
+        actions.append("wait_review")
     if checks["all_green"] and not new_comments:
         actions.append("done")
     return actions if actions else ["wait_ci"]
@@ -414,13 +429,13 @@ def snapshot(pr_arg=None, mark_seen=None, do_retry=False,
 
 
 def _build_snapshot(pr, state, sp):
-    if not state.get("reviewer_mode"):
-        state["reviewer_mode"] = detect_reviewer_mode(pr["reviews"])
+    checks = get_checks(pr["number"], pr["repo"], pr["sha"])
+
+    # Re-detect mode every snapshot — a bot may appear after first run
+    state["reviewer_mode"] = detect_reviewer_mode(pr["reviews"], checks)
 
     state["last_sha"] = pr["sha"]
     state["bot_review_count"] = count_bot_reviews(pr["reviews"])
-
-    checks = get_checks(pr["number"], pr["repo"], pr["sha"])
     self_login = get_self_login()
     processed = set(str(x) for x in state.get("processed_comment_ids", []))
     new_comments = get_new_comments(pr["repo"], pr["number"], processed, self_login)

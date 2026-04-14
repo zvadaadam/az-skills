@@ -57,8 +57,12 @@ loop:
   if "triage_comments" in actions:
     run TRIAGE PROCESS (see references/triage-process.md)
     push fixes
-    gl-snapshot.py --wait-review
+    gl-snapshot.py --wait-review    # wait for bot to re-review
     goto snapshot
+
+  if "wait_review" in actions:
+    gl-snapshot.py --wait-review    # bot is reviewing (e.g. CodeRabbit pending)
+    goto snapshot                   # will have comments to triage after
 
   if "wait_ci" in actions:
     gh pr checks [PR] --watch --fail-fast
