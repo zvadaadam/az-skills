@@ -45,6 +45,7 @@ git pull
 ## What's inside
 
 ### Engineering
+- **code-review** — Multi-lens code review with 3 parallel sub-agents (correctness, security, design) that validates and reports only high-signal findings
 - **devs-roundtable** — 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then build consensus
 - **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up
 - **deslop** — Detects and removes AI-generated code slop (unnecessary abstractions, over-engineering, verbose patterns)

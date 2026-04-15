@@ -27,6 +27,30 @@ Returns structured JSON: CI status, review comments (with code context), and rec
 | `--timeout 120` | Custom timeout for `--wait-review` |
 | `--reset` | Clear state for fresh start |
 
+## Code Review Skill Awareness
+
+The code-review skill posts inline PR comments — just like CodeRabbit or any other bot. Greenlight-pr triages them all the same way.
+
+The difference: code-review signals its status via HTML comment markers in PR comments:
+- `<!-- code-review-status: in_progress -->` — review is running
+- `<!-- code-review-status: complete -->` — review is done, findings posted
+
+**Whenever you are about to triage comments or wait for reviews**, also check if a code-review is in progress. If it is, wait for it to finish before proceeding (poll every 30s, timeout 10min). This is in addition to the existing `--wait-review` polling for external bots — both must finish before you triage.
+
+```bash
+# Check if code-review skill is still running
+COMMENTS=$(gh pr view [PR] --comments --json comments -q '.comments[].body')
+if echo "$COMMENTS" | grep -q 'code-review-status: in_progress' && \
+   ! echo "$COMMENTS" | grep -q 'code-review-status: complete'; then
+  # Poll until complete
+  for i in $(seq 1 20); do
+    sleep 30
+    COMMENTS=$(gh pr view [PR] --comments --json comments -q '.comments[].body')
+    echo "$COMMENTS" | grep -q 'code-review-status: complete' && break
+  done
+fi
+```
+
 ## Main Loop
 
 ```
@@ -55,14 +79,17 @@ loop:
     goto snapshot
 
   if "triage_comments" in actions:
+    check for code-review in progress → wait if needed (see above)
     run TRIAGE PROCESS (see references/triage-process.md)
     push fixes
     gh pr checks [PR] --watch --fail-fast   # wait for CI first
     gl-snapshot.py --wait-review             # then wait for bot re-review
+    check for code-review in progress → wait if needed
     goto snapshot                            # fresh snapshot picks up new comments
 
   if "wait_review" in actions:
     gl-snapshot.py --wait-review    # bot still reviewing (e.g. CodeRabbit pending)
+    check for code-review in progress → wait if needed
     goto snapshot
 
   if "wait_ci" in actions:
