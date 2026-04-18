@@ -29,8 +29,9 @@ def sample_pr(**overrides):
 
 def sample_checks(**overrides):
     checks = {
-        "passed_count": 3, "failed_count": 0, "pending_count": 0,
-        "all_green": True, "failed": [],
+        "passed": 3, "failed": 0, "pending_ci": 0,
+        "pending_bots": [], "passed_bots": [],
+        "all_green": True, "failures": [],
     }
     checks.update(overrides)
     return checks
@@ -55,8 +56,8 @@ class TestRecommendActions:
     def test_fix_ci_when_branch_failure(self):
         actions = gl.recommend_actions(
             sample_pr(),
-            sample_checks(failed_count=1, all_green=False,
-                          failed=[{"name": "Build", "classification": "branch"}]),
+            sample_checks(failed=1, all_green=False,
+                          failures=[{"name": "Build", "classification": "branch"}]),
             [], {"retries_by_sha": {}}
         )
         assert "fix_ci" in actions
@@ -64,7 +65,7 @@ class TestRecommendActions:
     def test_retry_ci_when_all_flaky(self):
         actions = gl.recommend_actions(
             sample_pr(),
-            sample_checks(failed_count=2, all_green=False, failed=[
+            sample_checks(failed=2, all_green=False, failures=[
                 {"name": "Build", "classification": "flaky"},
                 {"name": "Lint", "classification": "flaky"},
             ]),
@@ -75,7 +76,7 @@ class TestRecommendActions:
     def test_fix_ci_when_mixed_failures(self):
         actions = gl.recommend_actions(
             sample_pr(),
-            sample_checks(failed_count=2, all_green=False, failed=[
+            sample_checks(failed=2, all_green=False, failures=[
                 {"name": "Build", "classification": "branch"},
                 {"name": "Lint", "classification": "flaky"},
             ]),
@@ -87,8 +88,8 @@ class TestRecommendActions:
     def test_stop_when_retries_exhausted(self):
         actions = gl.recommend_actions(
             sample_pr(),
-            sample_checks(failed_count=1, all_green=False,
-                          failed=[{"name": "Build", "classification": "flaky"}]),
+            sample_checks(failed=1, all_green=False,
+                          failures=[{"name": "Build", "classification": "flaky"}]),
             [], {"retries_by_sha": {"abc12345": 3}}
         )
         assert "stop_exhausted_retries" in actions
@@ -102,8 +103,8 @@ class TestRecommendActions:
     def test_triage_takes_priority_over_ci(self):
         actions = gl.recommend_actions(
             sample_pr(),
-            sample_checks(failed_count=1, all_green=False,
-                          failed=[{"name": "Build", "classification": "branch"}]),
+            sample_checks(failed=1, all_green=False,
+                          failures=[{"name": "Build", "classification": "branch"}]),
             [{"id": "1", "body": "fix this"}],
             {"retries_by_sha": {}}
         )
@@ -112,37 +113,36 @@ class TestRecommendActions:
     def test_wait_ci_when_pending(self):
         actions = gl.recommend_actions(
             sample_pr(),
-            sample_checks(pending_count=2, all_green=False),
+            sample_checks(pending_ci=2, all_green=False),
             [], {"retries_by_sha": {}}
         )
         assert actions == ["wait_ci"]
+
+    def test_wait_review_when_bots_pending(self):
+        actions = gl.recommend_actions(
+            sample_pr(),
+            sample_checks(pending_bots=["coderabbitai"]),
+            [], {"retries_by_sha": {}}
+        )
+        assert actions == ["wait_review"]
 
 
 # ── Bot detection tests ────────────────────────────────────
 
 class TestBotDetection:
     def test_detects_coderabbit(self):
-        reviews = [{"author": {"login": "coderabbitai[bot]"}, "state": "COMMENTED"}]
-        assert gl.detect_reviewer_mode(reviews) == "BOT"
+        assert gl.is_bot_check("coderabbitai")
 
     def test_detects_copilot(self):
-        reviews = [{"author": {"login": "copilot[bot]"}, "state": "COMMENTED"}]
-        assert gl.detect_reviewer_mode(reviews) == "BOT"
+        assert gl.is_bot_check("copilot-review")
 
-    def test_self_when_only_humans(self):
-        reviews = [{"author": {"login": "developer"}, "state": "APPROVED"}]
-        assert gl.detect_reviewer_mode(reviews) == "SELF"
+    def test_detects_sonarcloud(self):
+        assert gl.is_bot_check("SonarCloud Code Analysis")
 
-    def test_self_when_no_reviews(self):
-        assert gl.detect_reviewer_mode([]) == "SELF"
-
-    def test_count_bot_reviews(self):
-        reviews = [
-            {"author": {"login": "coderabbitai[bot]"}},
-            {"author": {"login": "developer"}},
-            {"author": {"login": "coderabbitai[bot]"}},
-        ]
-        assert gl.count_bot_reviews(reviews) == 2
+    def test_does_not_match_normal_check(self):
+        assert not gl.is_bot_check("Build")
+        assert not gl.is_bot_check("lint")
+        assert not gl.is_bot_check("test-unit")
 
 
 # ── Flaky detection tests ─────────────────────────────────
@@ -171,17 +171,15 @@ class TestState:
         state = gl.load_state(tmp_path / "nonexistent.json")
         assert state["round"] == 0
         assert state["processed_comment_ids"] == []
-        assert state["reviewer_mode"] is None
 
     def test_save_and_load(self, tmp_path):
         sp = tmp_path / "state.json"
-        state = {"round": 3, "processed_comment_ids": ["1", "2"], "reviewer_mode": "BOT",
-                 "retries_by_sha": {}, "last_sha": "abc", "bot_review_count": 5}
+        state = {"round": 3, "processed_comment_ids": ["1", "2"],
+                 "retries_by_sha": {}, "last_sha": "abc", "last_comment_count": 5}
         gl.save_state(sp, state)
         loaded = gl.load_state(sp)
         assert loaded["round"] == 3
         assert loaded["processed_comment_ids"] == ["1", "2"]
-        assert loaded["reviewer_mode"] == "BOT"
 
     def test_corrupt_state_returns_fresh(self, tmp_path):
         sp = tmp_path / "state.json"

@@ -412,6 +412,10 @@ def snapshot(pr_arg=None, mark_seen=None, do_retry=False,
         wait_result = wait_for_comments(pr, state, sp, timeout=wait_timeout)
         snap = _build_snapshot(pr, state, sp)
         snap["wait_result"] = wait_result
+        # If we timed out waiting and the only recommended action is to wait
+        # again, report blocked state instead of looping forever.
+        if wait_result.get("timed_out") and snap["actions"] == ["wait_review"]:
+            snap["actions"] = ["stop_waiting_review_pending"]
         return snap
 
     return _build_snapshot(pr, state, sp)
