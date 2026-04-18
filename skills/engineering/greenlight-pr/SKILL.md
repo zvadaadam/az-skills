@@ -51,6 +51,15 @@ if echo "$COMMENTS" | grep -q 'code-review-status: in_progress' && \
 fi
 ```
 
+## Terminal States
+
+| State | Meaning | Agent behavior |
+|-------|---------|----------------|
+| `done` | CI green, no pending bot reviews, no new comments | Report merge-ready |
+| `stop_pr_closed` | PR was merged or closed | Stop |
+| `stop_exhausted_retries` | Flaky CI retry budget used up | Escalate to user |
+| `stop_waiting_review_pending` | Timed out waiting; external bot review still pending | Report "blocked on external review" and exit cleanly — do **not** present as finished or merge-ready. Rerun later. |
+
 ## Main Loop
 
 ```
@@ -83,21 +92,26 @@ loop:
     run TRIAGE PROCESS (see references/triage-process.md)
     push fixes
     gh pr checks [PR] --watch --fail-fast   # wait for CI first
-    gl-snapshot.py --wait-review             # then wait for bot re-review
+    snapshot = gl-snapshot.py --wait-review  # polls with timeout; returns full snapshot
     check for code-review in progress → wait if needed
-    goto snapshot                            # fresh snapshot picks up new comments
+    actions = snapshot.actions               # may be stop_waiting_review_pending if timed out
+    continue loop                            # re-evaluate from wait result
 
   if "wait_review" in actions:
-    gl-snapshot.py --wait-review    # bot still reviewing (e.g. CodeRabbit pending)
+    snapshot = gl-snapshot.py --wait-review   # polls with timeout; returns full snapshot
     check for code-review in progress → wait if needed
-    goto snapshot
+    actions = snapshot.actions                # may be stop_waiting_review_pending if timed out
+    continue loop                            # re-evaluate — do NOT re-snapshot
 
   if "wait_ci" in actions:
     gh pr checks [PR] --watch --fail-fast
     goto snapshot
 
+  if "stop_waiting_review_pending" in actions:
+    return "CI green, no actionable comments yet, but external bot review still pending. Rerun later."
+
   if "done" in actions:
-    return "CI green, no new comments — merge-ready"
+    return "CI green, no pending bot reviews, no new comments — merge-ready"
 ```
 
 ## Happy Path Example
