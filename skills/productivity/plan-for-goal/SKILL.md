@@ -37,7 +37,7 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 - **Directional, not prescriptive.** Describe the destination vividly; let the agent pick the route. No step-by-step recipes, no locked-in libraries unless the user explicitly required them.
 - **One objective, not a backlog.** If you find yourself listing unrelated tasks, you have multiple goals — split them. A goal is one durable target with one stopping condition.
 - **Re-readable cold.** No "continue", "finish what's left", "as we discussed". Each turn re-reads this from scratch.
-- **Under ~4000 characters.** The hard cap on most `/goal` implementations. Be tight.
+- **Under 4000 characters — hard limit.** Most `/goal` implementations clip past this. Measure before showing (see step 4 below); don't ship a draft you haven't counted.
 - **2-4 sentences per anchor.** The prompt is re-injected every turn; padding compounds across the whole loop.
 - **Don't duplicate the harness.** The continuation template already enforces completion audits, scope preservation, and budget discipline. Don't restate that.
 
@@ -46,9 +46,10 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 1. Read the conversation. If something critical is missing for one of the pieces above, ask — one targeted question at a time, with your best guess attached.
 2. Draft the prompt as plain prose with clear sections.
 3. **Cold-read self-check before showing it.** Re-read your own draft as if it were turn 50 and you had zero other context. If you can't tell what "done" looks like, fix the close-the-loop section before showing the user.
-4. Show it in a single fenced code block so the user can copy it straight into `/goal`.
-5. Offer to sharpen the voice, tighten, or restore anchors the user flags missing.
-6. If the loop drifts later, come back here and **rewrite the goal** — the harness re-reads the prompt every turn, so a tighter prompt is the lever, not patches to a running goal.
+4. **Measure the draft against the 4000-char limit.** Pipe it through `wc -m` (or count yourself if no shell) and verify the result is `< 4000`. If it's over, tighten — cut adverbs, fold redundant anchors, drop examples from the quality bar — and re-measure. Don't show the user a draft you haven't measured. State the final count to the user in one line above the code block (e.g. *"3,847 chars — under the 4000 cap."*) so they can trust it without re-checking.
+5. Show it in a single fenced code block so the user can copy it straight into `/goal`.
+6. Offer to sharpen the voice, tighten, or restore anchors the user flags missing.
+7. If the loop drifts later, come back here and **rewrite the goal** — the harness re-reads the prompt every turn, so a tighter prompt is the lever, not patches to a running goal.
 
 ---
 
