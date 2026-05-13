@@ -26,7 +26,7 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 
 2. **The quality bar — the hell-of-a-thing line.** Vivid, opinionated, sensory. This is the compass for the hundred micro-decisions the loop will make. Two opinionated sentences beat a paragraph of qualifiers. Examples: *"Boring. Bulletproof. Nobody on the team thinks about payments after this ships."* / *"Feels like the OS did it, not a bolt-on."* / *"Reads like a colleague summarized your week, not a robot stapling bullets together."*
 
-3. **How to close the loop.** How the agent verifies, by itself, that this is working — every iteration. Which command to run, which surface to poke (browser, simulator, CLI, tests), what counts as "actually working" vs "compiles". Use the tools actually available in this environment. *End with one explicit line:* **`Done = …`** *— a single boolean the completion audit can map evidence to.*
+3. **How to close the loop.** How the agent verifies, by itself, that this is working — every iteration. Which command to run, which surface to poke (browser, simulator, CLI, tests), what counts as "actually working" vs "compiles". Use the tools actually available in this environment. For web/mobile/desktop work, the loop needs a tool that can drive that surface — see `references/self-verification-tools.md` and tell the user upfront if the relevant tool isn't installed, so they can install it before running `/goal`. *End with one explicit line:* **`Done = …`** *— a single boolean the completion audit can map evidence to.*
 
 4. **Scope edges.** What's in, what's not, and which choices the agent is free to make. The highest-leverage move here is the **`Not:`** list — the adjacent features the agent will be tempted to build and shouldn't (`--verbose`, a refactor, a second flag). Naming them upfront is what keeps a 30-turn loop from sprawling.
 
@@ -52,4 +52,6 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 
 ---
 
-**Reference:** `references/examples.md` has three worked example prompts (migration, feature build, optimization). Read it when you need to calibrate voice or see how the anchors flex per domain — especially how `Done =` and the close-the-loop shape change between a transformation, a creation, and an iteration.
+**References:**
+- `references/examples.md` — three worked example prompts (migration, feature build, optimization). Read it when calibrating voice or seeing how anchors flex per domain.
+- `references/self-verification-tools.md` — CLI/MCP tools that let the loop drive a browser, simulator, or desktop (`agent-browser`, `agent-device`, `cua`). Consult before drafting close-the-loop for any UI work; warn the user if nothing's installed.
