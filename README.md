@@ -61,4 +61,5 @@ git pull
 
 ### Productivity
 - **interview-me** — Interviews you about a plan or design until it has all the context to build the right thing
+- **plan-for-goal** — Turns conversation context into a single prompt for a coding agent's `/goal` orchestration loop — directional outcome, quality bar, and a self-verification path the loop can iterate against
 - **ai-journal** — Observes how you work with AI and documents patterns, habits, and improvement ideas
