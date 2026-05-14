@@ -47,7 +47,7 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 2. Draft the prompt as plain prose with clear sections.
 3. **Cold-read self-check before showing it.** Re-read your own draft as if it were turn 50 and you had zero other context. If you can't tell what "done" looks like, fix the close-the-loop section before showing the user.
 4. **Measure the draft against the 4000-char limit.** Pipe it through `wc -m` (or count yourself if no shell) and verify the result is `< 4000`. If it's over, tighten — cut adverbs, fold redundant anchors, drop examples from the quality bar — and re-measure. Don't show the user a draft you haven't measured. State the final count to the user in one line above the code block (e.g. *"3,847 chars — under the 4000 cap."*) so they can trust it without re-checking.
-5. Show it in a single fenced code block so the user can copy it straight into `/goal`.
+5. Copy the final prompt to the clipboard, then show it in a single fenced code block so the user can paste it straight into `/goal`.
 6. Offer to sharpen the voice, tighten, or restore anchors the user flags missing.
 7. If the loop drifts later, come back here and **rewrite the goal** — the harness re-reads the prompt every turn, so a tighter prompt is the lever, not patches to a running goal.
 
