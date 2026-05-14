@@ -30,10 +30,11 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 
 4. **Scope edges.** What's in, what's not, and which choices the agent is free to make. The highest-leverage move here is the **`Not:`** list — the adjacent features the agent will be tempted to build and shouldn't (`--verbose`, a refactor, a second flag). Naming them upfront is what keeps a 30-turn loop from sprawling.
 
-5. **Where to look.** Files, designs, prior art that orient the agent. The agent reads current state every turn — point at the state that matters most so it doesn't grep blind.
+5. **Where to look.** Zones, not paths. Name the *neighborhood* that matters (`the route layer`, `the eval suite`, `existing prompts for voice`) — not specific files. The prompt is re-injected every turn while the codebase mutates underneath it; a hyper-specific path goes stale fast and biases the agent toward files that may have moved, split, or vanished. Trust the agent to grep — your job is to point at the area. Skip this anchor entirely if the codebase is small or the relevant zones are obvious from the goal itself.
 
 ## Rules for the prompt
 
+- **Describe the destination, not the current map.** The prompt is re-injected every turn while the loop reshapes the code beneath it. Anything that describes *current* state — exact paths, line numbers, the present shape of a file, current architectural seams — rots fast and biases the agent toward stale facts. Prefer durable names (`the route layer`, `the eval suite`, `auth behavior`) over pointers (`src/routes/users.ts:42`). This applies across all five anchors, not just `Where to look`.
 - **Directional, not prescriptive.** Describe the destination vividly; let the agent pick the route. No step-by-step recipes, no locked-in libraries unless the user explicitly required them.
 - **One objective, not a backlog.** If you find yourself listing unrelated tasks, you have multiple goals — split them. A goal is one durable target with one stopping condition.
 - **Re-readable cold.** No "continue", "finish what's left", "as we discussed". Each turn re-reads this from scratch.
