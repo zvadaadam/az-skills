@@ -20,17 +20,17 @@ Boring. Symmetric. No "we'll fix this later" branches. Every Hono handler reads 
 3. Delete the Express handler only when its Hono counterpart has passing tests and the diff is clean.
 4. Final check: `git grep -i "express"` returns nothing in `src/`.
 
-**Done =** All routes served by Hono, integration suite green, no `express` imports in `src/`, `package.json` no longer depends on `express`.
+**Done =** All routes served by Hono, integration suite green, no `express` imports anywhere in the application source, no `express` dependency in the package manifest.
 
-**Not:** new endpoints, schema changes, switching the ORM, changing the test framework, touching auth middleware logic (only its wiring).
+**Not:** new endpoints, schema changes, switching the ORM, changing the test framework, redesigning auth (remount the existing middleware, don't rewrite it).
 
 **Open:** how to structure Hono routes — per-file, grouped, router pattern — agent picks based on what's idiomatic in the codebase.
 
 **Where to look:**
-- `src/routes/` — Express route definitions
-- `tests/integration/` — the parity suite
-- `src/server.ts` — entry point
-- Any existing Hono usage in the repo (`grep -r "hono"`)
+- The Express route layer — current handlers being migrated
+- The integration test suite — the parity bar
+- The server entry point — where the framework is mounted
+- Any existing Hono usage already in the repo
 ```
 
 **What works here:**
@@ -63,9 +63,9 @@ Logging is one shot — type, hit enter, done. The summary is short, specific, c
 **Open:** storage format (sqlite, JSON, whatever fits), LLM prompt for the summary, delivery channel for the Monday note.
 
 **Where to look:**
-- `src/commands/` — how other subcommands are wired
-- `src/config.rs` — per-user storage conventions
-- `prompts/` — existing LLM prompts to match voice
+- The CLI subcommand layer — how other commands are wired
+- Per-user storage conventions in the config area
+- Existing LLM prompts — to match voice
 ```
 
 **What works here:**
@@ -98,9 +98,9 @@ Tight, surgical edits. No prompt-bloat — every added instruction earns its kee
 **Open:** which categories to attack in which order, what edits to try, whether to add few-shot examples or rewrite instructions.
 
 **Where to look:**
-- `prompts/extract.md` — the prompt being optimized
-- `evals/` — the suite and current scores
-- `evals/CHANGELOG.md` — prior iteration notes (or create if missing)
+- The extraction prompt being optimized
+- The eval suite and its per-category scores
+- The iteration changelog in the evals area (or create if missing)
 ```
 
 **What works here:**
@@ -115,4 +115,4 @@ Tight, surgical edits. No prompt-bloat — every added instruction earns its kee
 - **The `Done =` line is one boolean per anchor.** Not a paragraph. The completion audit maps evidence to each clause.
 - **`Not:` is doing real work in every example.** It cuts off the loop's natural sprawl. The temptations differ per domain (schema cleanup for migrations, polish for prototypes, scope creep for optimizations), but the discipline is the same.
 - **`Open:` is generous.** The agent picks tech, structure, ordering. The user picks the destination.
-- **`Where to look:` points at 3-5 concrete files, not a general "the codebase".** The agent re-reads these every turn — make them count.
+- **`Where to look:` names 3-5 *zones*, not specific paths.** The prompt gets re-injected every turn while the codebase mutates — hyper-specific paths go stale and bias the agent toward files that may have moved or been split. Durable area-names ("the route layer", "the eval suite") survive the loop's own refactors. Skip the anchor entirely if the zones are obvious from the goal.
