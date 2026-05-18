@@ -11,9 +11,9 @@ Each file under `goals/` is shaped exactly like a `plan-for-goal` output. **Read
 
 **Quality bar.** <1–2 opinionated sentences. Inherits the mega-goal's quality bar from the roadmap; a sub-goal can sharpen it for its specifics but shouldn't contradict it.>
 
-**How to close the loop.** <How the agent verifies, every iteration, that this sub-goal is working. Which commands, which surfaces (browser, simulator, CLI, tests). Use the self-verification tooling actually available — see `../../plan-for-goal/references/self-verification-tools.md`.>
+**How to close the loop.** <How the agent verifies, every iteration, that THIS specific sub-goal is working — NOT "all repo tests pass". Generic `bun run test` / `pnpm test` / `cargo test` is a baseline gate, not sub-goal verification. The verification path must include sub-goal-specific commands or surfaces (a specific test file, a specific browser flow, a specific CLI invocation, a specific grep for an artifact's presence/absence) that prove THIS sub-goal's directional outcome. Use the self-verification tooling actually available — see `../../plan-for-goal/references/self-verification-tools.md`. A sub-goal without its own verification path will be marked "done" any time the repo-wide tests are green, regardless of whether the sub-goal's actual work was done — exactly the failure mode that produced 34 minutes of local edits and zero PRs.>
 
-`Done = <single boolean the completion audit maps evidence to. MUST include "CI green AND /code-review clean" — the loop will not check the box otherwise.>`
+`Done = <single boolean the completion audit maps evidence to. MUST end with the literal clause: "PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean". Do not write "CI green" alone — that's ambiguous and agents will read it as local tests passing. The PR-specific phrasing prevents that drift: it makes the box-checking mechanically tied to an actual open PR, not to a local change set.>`
 
 **Scope edges.** <What's in, what's not. The `Not:` list of adjacent tempting work — the highest-leverage anchor against sprawl.>
 

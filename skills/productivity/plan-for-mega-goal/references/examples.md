@@ -19,11 +19,11 @@ This is a mega-goal because it's 5+ sub-goals with a shared destination ("WorkOS
 > **Quality bar:** Users don't notice the swap. SSO and magic-link flows feel native, not tacked-on. Zero sessions terminated mid-migration.
 >
 > **Sub-goals (5):**
-> 1. **WorkOS connection + dev environment** — `Done =` `npx workos test` returns valid org+connection in dev, env vars in `.env.example`, CI green AND /code-review clean.
-> 2. **Session migration script** — `Done =` script maps every active session row to a WorkOS user, idempotent re-run produces zero diffs, CI green AND /code-review clean.
-> 3. **Login + magic-link UI** — `Done =` cold visit to `/login` → magic-link email → click → dashboard with valid session in <5s; cookie has `HttpOnly` + `SameSite=Lax`; CI green AND /code-review clean.
-> 4. **Password reset + SSO callback** — `Done =` reset email triggers WorkOS-managed flow; SSO callback handles success, error, and replay without leaking session tokens; CI green AND /code-review clean.
-> 5. **Tear down old auth code** — `Done =` `git grep -i "bcrypt\|password_hash"` returns nothing in `src/`, `users.password_hash` column dropped, no dead routes, CI green AND /code-review clean.
+> 1. **WorkOS connection + dev environment** — `Done =` `npx workos test` returns valid org+connection in dev, env vars in `.env.example`, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
+> 2. **Session migration script** — `Done =` script maps every active session row to a WorkOS user, idempotent re-run produces zero diffs, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
+> 3. **Login + magic-link UI** — `Done =` cold visit to `/login` → magic-link email → click → dashboard with valid session in <5s; cookie has `HttpOnly` + `SameSite=Lax`; PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
+> 4. **Password reset + SSO callback** — `Done =` reset email triggers WorkOS-managed flow; SSO callback handles success, error, and replay without leaking session tokens; PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
+> 5. **Tear down old auth code** — `Done =` `git grep -i "bcrypt\|password_hash"` returns nothing in `src/`, `users.password_hash` column dropped, no dead routes, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
 >
 > **Dependencies:**
 > - 01: none
@@ -49,11 +49,11 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 
 ## Sub-goals
 
-- [ ] **01 — WorkOS connection + dev environment** — `goals/01-workos-connection.md` — `Done =` `npx workos test` returns valid org+connection, env vars in `.env.example`, CI green AND /code-review clean
-- [ ] **02 — Session migration script** — `goals/02-session-migration.md` — `Done =` migration script maps every active session to a WorkOS user, idempotent, CI green AND /code-review clean
-- [ ] **03 — Login + magic-link UI** — `goals/03-login-magic-link.md` — `Done =` cold `/login` → magic-link → dashboard in <5s, cookie `HttpOnly`+`SameSite=Lax`, CI green AND /code-review clean
-- [ ] **04 — Password reset + SSO callback** — `goals/04-reset-and-sso.md` — `Done =` reset email triggers WorkOS flow; SSO callback handles success/error/replay without token leaks, CI green AND /code-review clean
-- [ ] **05 — Tear down old auth code** — `goals/05-teardown.md` — `Done =` `git grep -i "bcrypt|password_hash"` empty in `src/`, column dropped, no dead routes, CI green AND /code-review clean
+- [ ] **01 — WorkOS connection + dev environment** — `goals/01-workos-connection.md` — `Done =` `npx workos test` returns valid org+connection, env vars in `.env.example`, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean
+- [ ] **02 — Session migration script** — `goals/02-session-migration.md` — `Done =` migration script maps every active session to a WorkOS user, idempotent, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean
+- [ ] **03 — Login + magic-link UI** — `goals/03-login-magic-link.md` — `Done =` cold `/login` → magic-link → dashboard in <5s, cookie `HttpOnly`+`SameSite=Lax`, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean
+- [ ] **04 — Password reset + SSO callback** — `goals/04-reset-and-sso.md` — `Done =` reset email triggers WorkOS flow; SSO callback handles success/error/replay without token leaks, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean
+- [ ] **05 — Tear down old auth code** — `goals/05-teardown.md` — `Done =` `git grep -i "bcrypt|password_hash"` empty in `src/`, column dropped, no dead routes, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean
 
 ## Dependencies
 
@@ -87,7 +87,7 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 7. `gh pr checks <pr>` shows CI green.
 8. `/code-review <pr>` returns no high-severity findings.
 
-`Done =` Cold visit `/login` → magic-link email → click → `/dashboard` with valid session in under 5s, cookie has `HttpOnly` and `SameSite=Lax`, error states human-readable, no third-party UI bleed-through, CI green AND /code-review clean.
+`Done =` Cold visit `/login` → magic-link email → click → `/dashboard` with valid session in under 5s, cookie has `HttpOnly` and `SameSite=Lax`, error states human-readable, no third-party UI bleed-through, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
 
 **Scope edges.** `Not:` redesigning the dashboard, adding social login providers beyond what WorkOS already wires up, changing the email transport, building a "remember me" toggle, retrofitting the old session table (that's sub-goal 02's job).
 
@@ -100,7 +100,7 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 \`\`\`markdown
 **Part of mega-goal:** `auth-rewrite` (sub-goal 03 of 05)
 **Roadmap:** `.megagoal/auth-rewrite/ROADMAP.md`
-**Done =** Cold visit `/login` → magic-link → `/dashboard` with valid session in <5s, cookie `HttpOnly`+`SameSite=Lax`, error states human-readable, CI green AND /code-review clean.
+**Done =** Cold visit `/login` → magic-link → `/dashboard` with valid session in <5s, cookie `HttpOnly`+`SameSite=Lax`, error states human-readable, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
 **Stack:** depends on sub-goal 02 (session migration); blocks sub-goal 05 (teardown).
 
 ## What changed
@@ -119,24 +119,37 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 
 ### Step 4 — The pointer prompt (this is what the user pastes into `/goal`)
 
-Measured at **2,977 characters** — under the 4000 cap.
+Measured at **3,595 characters** — under the 4000 cap. (The autonomy/hard-rules prompt is large by design — every line in it is preventing an observed failure mode, not micromanaging tactics.)
 
 ```
 Work the mega-goal at `.megagoal/auth-rewrite/ROADMAP.md` using stacked-prs with ghstack. Run autonomously — keep moving and self-handle interruptions, don't wait for human input.
 
-**Read every turn:** ROADMAP.md and the sub-goal file you're working on. On-disk is authoritative; memory of earlier turns may be stale.
+**Turn-1 pre-flight (MUST pass):** verify `gh` and `ghstack` installed (`which gh ghstack`). If either is missing, log `tooling missing: <what>` to NOTES.md and stop — do not write code or check boxes. Install and re-paste this prompt.
 
-**Picking what to work on.** First check open PRs in the stack — if any prior PR shows CHANGES_REQUESTED, address it before starting new work: read the comments, fix on that PR's branch, `ghstack submit` to restack, reply on the PR. The only thing that halts a sub-goal is a reviewer literally writing "do not proceed". Otherwise, work the next unchecked sub-goal whose dependencies (per ROADMAP.md `Dependencies:`) are all checked. Pre-flight: if its `Done =` is already true, check the box and continue. If nothing's workable but unchecked sub-goals remain, retry blocked ones once each, then stop.
+**Read every turn:** ROADMAP.md and the sub-goal file you're working on. On-disk is authoritative; memory may be stale.
 
-**Working a sub-goal until its `Done =` is true.** Write code on a stacked branch via ghstack. `ghstack submit` opens or updates the PR — the PR body's static block comes from the sub-goal file's `## PR body`; fill in `## What changed` and `## Verification` from the actual diff. Wait for CI green. Run `/code-review <pr>`. Address high-severity findings on the same branch; skip nits. If a CI or code-review failure persists after fixing the obvious cause more than once, it's probably infrastructure flake or a deeper issue — log to NOTES.md, mark blocked, hop. Judgment beats a fixed retry count. When CI is green AND /code-review clean AND no pending CHANGES_REQUESTED on this PR: check the box (`- [ ]` → `- [x] — PR #N`), continue.
+**Picking what to work on.** First check open PRs — if any prior PR has CHANGES_REQUESTED, address it before new work: fix on that PR's branch, `ghstack submit` to restack, reply. The only halt is a reviewer literally writing "do not proceed". Otherwise work the next unchecked sub-goal whose dependencies are all checked. Pre-flight: if its `Done =` is already true, check the box as `- [x] — PR #N` and continue. If nothing's workable but unchecked sub-goals remain, retry blocked ones once each, then stop.
 
-**Log to NOTES.md as you go** — one-line entries: sub-goal complete (PR # + wall time), reviewer feedback addressed (what + why), block (what was tried, what's next), periodic heartbeat when the loop's been running long, cross-cutting decisions, proposed new sub-goals under `## Proposed additions` (propose, don't work). Append-only. The human reads NOTES.md top-to-bottom on return.
+**Working a sub-goal until its `Done =` is true.** Write code on a stacked branch via ghstack. `ghstack submit` opens/updates the PR — the PR body's static block comes from the sub-goal file's `## PR body`; fill in `## What changed` and `## Verification` from the actual diff. Wait for CI green ON THE OPEN PR (`gh pr checks <pr>` — NOT local tests). Run `/code-review <pr>`. Fix high-severity findings on the same branch; skip nits. If a failure persists after fixing the obvious cause more than once, log to NOTES.md, mark blocked, hop. Judgment beats a fixed retry count.
 
-**Don't:** merge PRs (human's gate) · rewrite a sub-goal's `Done =` or directional outcome mid-loop (contract is fixed) · invent sub-goals (propose, continue with existing roadmap) · amend earlier sub-goals' commits from a later branch (use a fix-up commit instead — fixing review feedback on the same PR's own branch is fine) · burn the loop on one stuck problem.
+**Verification for each sub-goal lives in its sub-goal file's "How to close the loop" — run THAT, not generic repo tests.** Repo-wide `bun run test` / `pnpm test` is a baseline gate; the sub-goal's own commands or surfaces are what prove the sub-goal's outcome.
 
-**Stop only when** all sub-goals are checked, every remaining sub-goal is blocked (after the once-each retry), or the token budget is exhausted. On any stop, write a final summary block to NOTES.md — outcome, PRs, time, blockers, reviewer requests addressed/pending. First thing the human reads on return.
+**Log to NOTES.md as you go** — one-line entries: sub-goal complete (PR # + wall time), reviewer feedback addressed, block, heartbeat when running long, cross-cutting decisions, proposed sub-goals under `## Proposed additions`. Append-only.
 
-`Done =` every sub-goal in `.megagoal/auth-rewrite/ROADMAP.md` is checked off AND every `Done =` line is proven against current state, audited against authoritative evidence (file contents, command output, PR check status, /code-review verdict), not memory.
+**Hard rules — not optional:**
+- ONE open PR per sub-goal via ghstack. Zero PRs (local diff only) is an unstarted sub-goal. One mega-PR is a failure mode.
+- A checked box is `- [x] — PR #N` for an actual open PR, or it's not checked. Local tests passing is NOT "CI green" — only the open PR's CI counts.
+- Don't merge PRs — human's gate.
+- Don't rewrite a sub-goal's `Done =` or directional outcome mid-loop.
+- Don't invent sub-goals — propose in NOTES.md, continue with existing roadmap.
+- Don't amend earlier sub-goals' commits from a later branch — use a fix-up on the current branch. (Review-feedback fixes on the same PR's own branch are fine.)
+- Don't burn the loop on one stuck problem.
+
+**Stack audit before stopping:** run `gh pr list --state open --search "head:gh/$(gh api user --jq .login)/auth-rewrite/"`. Confirm one open PR per sub-goal. Any checked sub-goal without a matching PR → box is invalid; unmark it and keep working. Only after the audit passes do you stop.
+
+**Stop only when** the stack audit confirms success, every remaining sub-goal is blocked (after once-each retry), or the token budget is exhausted. On any stop, write a final summary to NOTES.md — outcome, PRs with #, time, blockers, reviewer requests addressed/pending.
+
+`Done =` every sub-goal in ROADMAP.md is `- [x] — PR #N` for an actual open PR AND each `Done =` is proven against the PR's current state (CI status, /code-review verdict, PR file contents), not local state.
 ```
 
 ---
@@ -146,7 +159,7 @@ Work the mega-goal at `.megagoal/auth-rewrite/ROADMAP.md` using stacked-prs with
 - **The decomposition was shown to the user first as plain text.** Wrong splits are the most expensive failure mode; catch them cheapest before scaffolding. Edit commands (`merge X+Y`, `sharpen X`) let the user redirect in single small steps instead of a full re-do.
 - **Dependencies are mandatory and explicit.** The loop reads them every turn to reroute around blocked sub-goals. Without them, one blocked sub-goal would stall the whole loop instead of letting it hop to an independent one.
 - **Each sub-goal's `Done =` is audit-mappable** — filesystem state, command output, browser-driven verification, CI/code-review status. None of them are "feels right".
-- **CI green AND /code-review clean is baked into every `Done =`.** The loop won't check a box without both. The autonomy-friendly quality gate.
+- **PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean is baked into every `Done =`.** The loop won't check a box without both. The autonomy-friendly quality gate.
 - **The `Not:` list on sub-goal 03 names sub-goal 02's territory explicitly** — *"that's sub-goal 02's job"*. Mega-goal-specific discipline: scope edges aren't just "what's out of the mega-goal", they're also "what belongs to a sibling sub-goal".
 - **The pointer prompt frames the work, not the procedure.** Conceptual sections (what to read, how to pick, what "done" means, what to log, what not to do, when to stop) — not a 10-step recipe. The agent brings judgment for retry counts, exact tool invocations, timing. *Why this matters:* a capable agent reads the situation and adjusts; a step-by-step recipe rots whenever the situation differs.
 - **The PR body block lives in the sub-goal file.** Pre-written context (mega-goal slug, roadmap path, Done, stack position) plus agent-filled `## What changed` + `## Verification` from the actual diff. Reviewers see full context without leaving the PR.
