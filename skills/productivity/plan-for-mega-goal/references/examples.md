@@ -73,11 +73,11 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 ```markdown
 # 03 — Login + magic-link UI
 
-**Directional outcome.** A cold visitor at `/login` enters an email, receives a magic-link email within seconds, clicks it, and lands on the dashboard with a valid session. The form looks and feels like the rest of the app — no WorkOS-default styling bleeding through.
+**Goal:** A cold visitor at `/login` enters an email, receives a magic-link email within seconds, clicks it, and lands on the dashboard with a valid session. The form looks and feels like the rest of the app — no WorkOS-default styling bleeding through.
 
-**Quality bar.** Boring and instant. The user does not wait, does not bounce to a third-party domain, and does not see an auth screen they didn't expect. Error states are written like a teammate explains them, not like a stack trace.
+**What great looks like:** Boring and instant. The user does not wait, does not bounce to a third-party domain, and does not see an auth screen they didn't expect. Error states are written like a teammate explains them, not like a stack trace.
 
-**How to close the loop.**
+**How to close the loop:**
 1. `pnpm dev`; wait for the app to come up.
 2. Use `agent-browser` to navigate to `/login`, enter a test email, submit.
 3. Check the dev mailbox (mailpit / mailhog / etc.); a magic-link email must arrive within 5s.
@@ -87,13 +87,15 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 7. `gh pr checks <pr>` shows CI green.
 8. `/code-review <pr>` returns no high-severity findings.
 
-`Done =` Cold visit `/login` → magic-link email → click → `/dashboard` with valid session in under 5s, cookie has `HttpOnly` and `SameSite=Lax`, error states human-readable, no third-party UI bleed-through, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
+**Done =** Cold visit `/login` → magic-link email → click → `/dashboard` with valid session in under 5s, cookie has `HttpOnly` and `SameSite=Lax`, error states human-readable, no third-party UI bleed-through, PR opened via ghstack AND that PR's CI green AND /code-review on the PR clean.
 
-**Scope edges.** `Not:` redesigning the dashboard, adding social login providers beyond what WorkOS already wires up, changing the email transport, building a "remember me" toggle, retrofitting the old session table (that's sub-goal 02's job).
+**Not:** redesigning the dashboard, adding social login providers beyond what WorkOS already wires up, changing the email transport, building a "remember me" toggle, retrofitting the old session table (that's sub-goal 02's job).
 
-**Where to look.** The auth route layer, the existing login component, the WorkOS connection set up in sub-goal 01, the dev mailbox configuration.
+**Open:** which `agent-browser`-equivalent to use if `agent-browser` isn't wired up (harness computer-use or a manual checklist are acceptable fallbacks); exact form layout so long as it matches the rest of the app's component vocabulary.
 
-**Time budget.** ~3h.
+**Where to look:** The auth route layer, the existing login component, the WorkOS connection set up in sub-goal 01, the dev mailbox configuration.
+
+**Time budget:** ~3h.
 
 ## PR body
 

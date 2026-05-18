@@ -27,7 +27,9 @@ If you can't name 3+ distinct sub-goals each with their own `Done =` line, this 
 
 ## Each sub-goal inherits from `plan-for-goal`
 
-Every file under `goals/` is shaped exactly like a `plan-for-goal` output — same 5 anchors, same rules — with a small override list. **Read `../plan-for-goal/SKILL.md` first.** This skill governs only how sub-goals fit together as a system, not how each individual one is written. The override list lives in `references/subgoal-template.md`.
+Every file under `goals/` IS a `plan-for-goal` output — same anchors (`Goal`, `What great looks like`, `How to close the loop`, `Done =`, `Not`, `Open`, `Where to look`), same labels, same rules. **Read `../plan-for-goal/SKILL.md` first.** This skill governs only how sub-goals fit together as a system, not how each individual one is written.
+
+**Delegation, not duplication.** `references/subgoal-template.md` describes only the deltas: four rule overrides (4000-char cap doesn't apply to disk files; "one objective" applies per sub-goal; the pointer prompt is allowed one exact path; `Done =` / close-the-loop must be PR-specific and sub-goal-specific) plus two mega-goal-specific additions (`Time budget:` and `## PR body`). Updates to `plan-for-goal`'s anchors, labels, or rules flow through to mega-goal sub-goals automatically — sharpen `plan-for-goal`, every mega-goal benefits.
 
 ## What you produce
 
