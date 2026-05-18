@@ -37,16 +37,23 @@ Every file under `goals/` IS a `plan-for-goal` output — same anchors (`Goal`, 
 
 ```
 .megagoal/<slug>/
-├── ROADMAP.md            # checkbox list — single source of truth for what's done
+├── ROADMAP.md            # checkbox list — source of truth for what's done, records PR #s
 ├── POINTER_PROMPT.md     # the exact text pasted into /goal — durable + resumable
-├── goals/
-│   ├── 01-<slug>.md      # one plan-for-goal-shaped file per sub-goal
-│   ├── 02-<slug>.md
-│   └── ...
-└── NOTES.md              # cross-cutting decisions, append-only
+├── NOTES.md              # three sections: Active blockers (in place) · Proposed additions · Event log
+├── FEEDBACK.md           # append-only meta-feedback for improving the skill / tooling / codebase
+└── goals/
+    ├── 01-<slug>.md      # one plan-for-goal-shaped file per sub-goal
+    ├── 02-<slug>.md
+    └── ...
 ```
 
-`POINTER_PROMPT.md` holds the raw prompt (no markdown wrapper) — `cat .megagoal/<slug>/POINTER_PROMPT.md | pbcopy` regenerates the clipboard so the user can resume the loop hours or days later from any machine. It's also the durable record of "what spec was the loop actually running under" — without it, the prompt only lives in `/goal`'s thread-scoped SQLite and dies when the thread ends.
+**`FEEDBACK.md`** is the meta layer — append-only observations the agent records *during* the run about friction in the skill, missing tooling, or codebase issues that complicated the work. The audience is the skill maintainer (you), not the loop runner. After the run, you skim `FEEDBACK.md` and decide which items to fold back into `plan-for-mega-goal`, related tooling, or the codebase as separate work. See `references/feedback-template.md`. Without this, every mega-goal run's lessons evaporate; with it, the skill gets sharper with every use.
+
+**`ROADMAP.md`** records PR numbers as soon as they exist, not just when boxes get checked: `- [ ] — PR #117` for in-progress sub-goals, `- [x] — PR #117` for complete. This makes ROADMAP.md the canonical lookup for "what PRs belong to this stack" — no fragile branch-name search needed.
+
+**`POINTER_PROMPT.md`** holds the raw prompt (no markdown wrapper) — `cat .megagoal/<slug>/POINTER_PROMPT.md | pbcopy` regenerates the clipboard so the user can resume the loop hours or days later from any machine. It's also the durable record of "what spec was the loop actually running under" — without it, the prompt only lives in `/goal`'s thread-scoped SQLite and dies when the thread ends.
+
+**`NOTES.md`** has structured sections with different update semantics — `## Active blockers` is updated in place (no duplicate stop summaries), `## Proposed additions` is append-only, `## Event log` is append-only. See `references/notes-template.md`. Without this structure, every resume of a blocked loop appends another identical stop summary to NOTES.md — noise that obscures the real event log.
 
 **The pointer prompt** — the only thing the user pastes into `/goal`. It encodes how the loop runs **autonomously for hours or days without human intervention**: how to pick the next sub-goal, how to handle review feedback / CI failures / stack-tool conflicts inline, the discipline rules, and the genuine stop conditions. Under 4000 chars (codex's hard cap). See `references/examples.md` for the full form.
 
@@ -68,7 +75,13 @@ Every file under `goals/` IS a `plan-for-goal` output — same anchors (`Goal`, 
 
 3. **Pick the `<slug>`** as a short kebab-case noun for the whole mega-goal (e.g. `auth-rewrite`, `pricing-page`, `eval-harness`). State it to the user.
 
-4. **Write the scaffolding once approved.** Create `.megagoal/<slug>/` at repo root with `ROADMAP.md`, sub-goal files in `goals/` (numbered `01-…`, `02-…`), and an empty `NOTES.md`. Use the templates in `references/`. `POINTER_PROMPT.md` gets written in step 6 after the prompt is measured.
+4. **Write the scaffolding once approved.** Create `.megagoal/<slug>/` at repo root with:
+   - `ROADMAP.md` per `references/roadmap-template.md`
+   - sub-goal files in `goals/` (numbered `01-…`, `02-…`) per `references/subgoal-template.md`
+   - `NOTES.md` pre-scaffolded with three section headers (`## Active blockers`, `## Proposed additions`, `## Event log`) per `references/notes-template.md`
+   - `FEEDBACK.md` pre-scaffolded with the header and category list per `references/feedback-template.md`
+
+   Don't leave NOTES.md or FEEDBACK.md empty — the loop needs the section structure to know where to write. `POINTER_PROMPT.md` gets written in step 6 after the prompt is measured.
 
 5. **Each sub-goal file follows `plan-for-goal`'s 5 anchors** with the overrides in `references/subgoal-template.md`. Sub-goal files can be longer than 4000 chars — they're read from disk, not injected. Keep them tight anyway; padding compounds across the loop.
 
@@ -101,17 +114,21 @@ The pointer prompt frames the work for hours or days without human intervention.
 These are autonomy boundaries AND the workflow shape itself, not productivity tactics. The skill exists to enforce them. The pointer prompt must phrase them as rules with no softening language — agents will rationalize around constraints that read like "good defaults".
 
 - **One PR per sub-goal via `ghstack`.** Not zero PRs with local-only changes; not one mega-PR with everything in it. A sub-goal that exists only as un-PR'd local diff is an unstarted sub-goal, regardless of what the local diff contains. This is the core of "stacked PRs" — without this constraint, the agent will rationalize a 30-file local change set as "the mega-goal is done."
-- **A checked box is `- [x] — PR #N` or it's not checked.** No third form. The box-PR coupling is mechanical: without a PR number on the line, the box is invalid. This prevents the agent from treating PR creation as optional ceremony.
-- **"CI green" means the open PR's CI, NOT local tests.** `bun run test` (or `pnpm test`, `cargo test`, etc.) passing locally is not the gate. The gate is `gh pr checks <pr>` returning all-green on the open PR. Generic phrasing in `Done =` like *"CI green"* will be read as *"local tests pass"* — the sub-goal template requires the PR-specific phrasing.
+- **Record PR # on the roadmap entry as soon as `ghstack submit` opens it.** Update the line to `- [ ] — PR #N` (still unchecked) when the PR is opened, then to `- [x] — PR #N` when the sub-goal is complete. The PR # exists on the roadmap from the moment it exists in GitHub — not just at completion. This makes ROADMAP.md the canonical lookup for the stack PR set.
+- **A checked box is `- [x] — PR #N` or it's not checked.** No third form. The box-PR coupling is mechanical: without a PR number on a checked line, the box is invalid.
+- **"CI green" means the open PR's CI, NOT local tests.** `bun run test` (or `pnpm test`, `cargo test`, etc.) passing locally is not the gate. The gate is `gh pr checks <pr>` returning all-green on the open PR.
 - **Don't merge PRs.** Merging is the human's gate. The loop's job ends at *"stack opened, all PRs approved, ready for `ghstack land`"*.
 - **Don't rewrite a sub-goal's `Done =` or directional outcome mid-loop.** The contract is fixed once scaffolded. The agent CAN append a `## Notes` section to a sub-goal file explaining a deviation; the goal itself is immutable.
-- **`ROADMAP.md` boxes are the source of truth for "what's done".** Not memory, not assertion. If it's not checked as `- [x] — PR #N` in ROADMAP.md, the loop treats it as not done.
+- **`ROADMAP.md` is the source of truth for "what's done" AND for which PRs are in the stack.** Not memory, not assertion, not branch-name search.
 - **No new sub-goals mid-loop.** Discovered ones go under `## Proposed additions` in `NOTES.md`; the human reviews on return.
-- **Three genuine stop conditions:** all sub-goals checked-with-PR (success), every remaining sub-goal blocked (after one retry each), or token budget exhausted. Anything else → keep moving.
-- **Before claiming success, audit the stack.** Run `gh pr list --search "head:gh/$USER/<slug>/"`. Confirm one PR per sub-goal in ROADMAP.md. Any checked sub-goal without a corresponding PR → the box is invalid → unmark and continue working.
-- **On any stop, write a final summary block to `NOTES.md`** — outcome, PRs (with #), time, blockers, reviewer requests addressed and pending. The first thing the human reads on return.
-- **`NOTES.md` is append-only.** Preserve the history; never rewrite prior entries.
-- **Each sub-goal has its own verification path — generic test runs are not enough.** Every sub-goal file's "How to close the loop" must include sub-goal-specific commands or surfaces (a specific test file, browser flow, CLI invocation, or grep) that prove THIS sub-goal's outcome. Generic `bun run test` / `pnpm test` is a baseline — not sub-goal verification. Without sub-goal-specific verification, the loop treats repo-wide green tests as proof every sub-goal is done — the exact failure mode that produced 34 minutes of local edits and zero PRs.
+- **Three genuine stop conditions:** all sub-goals checked-with-PR (success), every remaining sub-goal blocked with unchanged prerequisite, or token budget exhausted. Anything else → keep moving.
+- **Before claiming success, audit the stack via roadmap PR numbers.** Extract every `PR #N` reference from ROADMAP.md; for each, `gh pr view <N> --json state,reviewDecision,statusCheckRollup`. Confirm open + CI green + /code-review clean. Any checked sub-goal whose PR fails the check → box is invalid → unmark and keep working. Don't use `gh pr list --search "head:..."` for this — ghstack uses numeric heads that won't match a slug-based pattern.
+- **On any stop, append a final summary block to `## Event log` in `NOTES.md`** — outcome, PRs (with #), time, blockers (point at `## Active blockers`, don't repeat full context), reviewer requests addressed and pending. The first thing the human reads on return.
+- **`NOTES.md` has structured sections with different rules:** `## Active blockers` is **updated in place** (no duplicate stop summaries); `## Proposed additions` and `## Event log` are append-only.
+- **Every blocker in `## Active blockers` has a fingerprint:** `command · failure · prerequisite · last verified`. Same fingerprint twice in a row → just bump `Last verified`. Different fingerprint → new line. Don't append duplicate stop summaries to `## Event log` for the same blocker.
+- **Retry blocked sub-goals only when the prerequisite has changed since `Last verified`.** If unchanged, bump the timestamp and skip the retry — no-op retries waste turns.
+- **Each sub-goal has its own verification path — generic test runs are not enough.** Every sub-goal file's "How to close the loop" must include sub-goal-specific commands or surfaces (a specific test file, browser flow, CLI invocation, or grep) that prove THIS sub-goal's outcome. Generic `bun run test` / `pnpm test` is a baseline — not sub-goal verification.
+- **Stack PRs are the PRs whose numbers appear on roadmap entries.** Open PRs NOT in that set are informational unless they target the same files or block this stack's CI — don't react to unrelated review activity.
 
 ## The whole scaffold guides the loop, not just the pointer prompt
 
@@ -134,9 +151,15 @@ Suggestions with reasoning. The agent uses judgment when the situation differs:
 - **Retry blocked sub-goals only when nothing else is workable.** Natural cooldown — make progress on whatever you can, circle back. *Why:* otherwise the loop burns turns on one stuck problem instead of accumulating progress.
 - **Periodic heartbeat to `NOTES.md` when the loop's been running for hours with nothing else to log.** *Why:* the human returning after many hours wants a recent timestamp confirming the loop didn't die.
 
-### `NOTES.md` is the audit trail
+### `NOTES.md` is the audit trail (three sections, different rules)
 
-Append a one-line entry per notable event — sub-goal complete (PR # + wall time), reviewer feedback addressed (what + why), block encountered (what was tried, what's next), periodic heartbeat, cross-cutting decision, proposed new sub-goal (under `## Proposed additions`). Date each entry. The human reads `NOTES.md` top-to-bottom on return; aim for skimmable-in-30-seconds.
+See `references/notes-template.md` for the full template. Quick summary:
+
+- **`## Active blockers`** — updated in place. One line per active blocker with the fingerprint format: `[blocked] sub-goal NN: <failure>. Prerequisite: <what must change>. Last verified: <ISO timestamp>.` Bump the timestamp only when state changes or a fresh audit is requested.
+- **`## Proposed additions`** — append-only. Sub-goals the agent discovered but didn't work (because they're not in the roadmap).
+- **`## Event log`** — append-only. One-line entries per notable event: sub-goal complete (PR # + wall time), reviewer feedback addressed, blocker resolved, heartbeat, cross-cutting decision, final summary block.
+
+The human reads NOTES.md top-to-bottom on return; aim for skimmable-in-30-seconds. The append-only/in-place split prevents the "every resume appends another identical stop summary" failure mode.
 
 ### Trust the agent — but be precise about what to trust it for
 
@@ -161,4 +184,6 @@ The dividing line: if the rule defines *what the output is*, it's a hard constra
 - `../plan-for-goal/SKILL.md` — anchor structure and rules for each sub-goal file. **Read first.**
 - `references/roadmap-template.md` — exact `ROADMAP.md` structure and update rules.
 - `references/subgoal-template.md` — sub-goal file format and the override list from `plan-for-goal`.
+- `references/notes-template.md` — `NOTES.md`'s three-section structure (Active blockers · Proposed additions · Event log) and the blocker fingerprint format.
+- `references/feedback-template.md` — `FEEDBACK.md`'s structure for capturing skill/tooling/codebase friction during a run.
 - `references/examples.md` — one worked mega-goal breakdown end to end.

@@ -38,6 +38,18 @@ Every sub-goal file ends with two things that don't exist in `plan-for-goal`:
 
 A line near the end of the sub-goal file. A soft target like `~30min` or `~2h`. If work runs long, the loop notes it in `NOTES.md` but doesn't stop — soft instrumentation for the human to spot sub-goals that ballooned. Use judgment for what "running long" means; a fixed multiplier would be the wrong shape here.
 
+### `**Human gate:**` (optional)
+
+A line near the end of the sub-goal file, used **only when** the sub-goal genuinely cannot complete without an explicit human action — production deploy approval, secrets rotation, a workflow file landing on default branch, credential setup. Format:
+
+```
+**Human gate:** <a specific, verifiable human action that must happen before this sub-goal can complete>
+```
+
+The loop refuses to check the box until either (a) the gate is satisfied autonomously and verifiably (e.g., the agent confirms the workflow now exists on default branch via `gh workflow list`), or (b) the human resolves it manually and a follow-up resume verifies. Treat human-gated sub-goals as blocked with a clear `Prerequisite:` line in `NOTES.md`'s `## Active blockers`.
+
+Don't sprinkle this anchor on sub-goals that don't need it — most sub-goals are pure code work with no human gate. If `Human gate:` ends up on more than ~30% of sub-goals in a mega-goal, the mega-goal probably isn't a good fit for autonomous operation.
+
 ### `## PR body` (required)
 
 This block is the template the loop substitutes into the GitHub PR description when opening the PR for this sub-goal. It exists because:

@@ -121,35 +121,37 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 
 ### Step 4 — The pointer prompt (this is what the user pastes into `/goal`)
 
-Measured at **3,595 characters** — under the 4000 cap. (The autonomy/hard-rules prompt is large by design — every line in it is preventing an observed failure mode, not micromanaging tactics.)
+Measured at **3,847 characters** — under the 4000 cap. (The autonomy/hard-rules prompt is large by design — every line in it is preventing an observed failure mode, not micromanaging tactics.)
 
 ```
 Work the mega-goal at `.megagoal/auth-rewrite/ROADMAP.md` using stacked-prs with ghstack. Run autonomously — keep moving and self-handle interruptions, don't wait for human input.
 
-**Turn-1 pre-flight (MUST pass):** verify `gh` and `ghstack` installed (`which gh ghstack`). If either is missing, log `tooling missing: <what>` to NOTES.md and stop — do not write code or check boxes. Install and re-paste this prompt.
+**Turn-1 pre-flight:** `which gh ghstack`. If missing, log to NOTES.md `## Event log` and stop. Install and re-paste.
 
-**Read every turn:** ROADMAP.md and the sub-goal file you're working on. On-disk is authoritative; memory may be stale.
+**Read every turn:** ROADMAP.md, the sub-goal file you're working on, NOTES.md `## Active blockers`. On-disk is authoritative.
 
-**Picking what to work on.** First check open PRs — if any prior PR has CHANGES_REQUESTED, address it before new work: fix on that PR's branch, `ghstack submit` to restack, reply. The only halt is a reviewer literally writing "do not proceed". Otherwise work the next unchecked sub-goal whose dependencies are all checked. Pre-flight: if its `Done =` is already true, check the box as `- [x] — PR #N` and continue. If nothing's workable but unchecked sub-goals remain, retry blocked ones once each, then stop.
+**Picking what to work on.** Stack PRs = PR numbers on ROADMAP.md entries (any line with `PR #N`). If any has CHANGES_REQUESTED, fix it before new work: edit on that PR's branch, `ghstack submit`, reply. Only halt is "do not proceed". Open PRs NOT in the stack are informational unless they target the same files or block this stack's CI. Otherwise work the next unchecked sub-goal whose dependencies are checked. If its `Done =` is already true, check the box and continue. If all remaining sub-goals are blocked, retry one only if its `Prerequisite:` in `## Active blockers` has actually changed since `Last verified:`. If unchanged, bump the timestamp and skip. If nothing retries, stop.
 
-**Working a sub-goal until its `Done =` is true.** Write code on a stacked branch via ghstack. `ghstack submit` opens/updates the PR — the PR body's static block comes from the sub-goal file's `## PR body`; fill in `## What changed` and `## Verification` from the actual diff. Wait for CI green ON THE OPEN PR (`gh pr checks <pr>` — NOT local tests). Run `/code-review <pr>`. Fix high-severity findings on the same branch; skip nits. If a failure persists after fixing the obvious cause more than once, log to NOTES.md, mark blocked, hop. Judgment beats a fixed retry count.
+**Working a sub-goal.** Code on a stacked branch. `ghstack submit` opens/updates the PR — immediately append `— PR #N` to the roadmap entry (still `- [ ]`). PR body's static block comes from the sub-goal file's `## PR body`; fill in `## What changed` and `## Verification` from the diff. Wait for `gh pr checks <pr>` green (NOT local tests). Run `/code-review <pr>`. Fix high-severity findings on the same branch; skip nits. If a failure persists after fixing the obvious cause more than once, add a `## Active blockers` line and hop.
 
-**Verification for each sub-goal lives in its sub-goal file's "How to close the loop" — run THAT, not generic repo tests.** Repo-wide `bun run test` / `pnpm test` is a baseline gate; the sub-goal's own commands or surfaces are what prove the sub-goal's outcome.
+**NOTES.md** (3 sections — see `notes-template.md`): `## Active blockers` updated in place with fingerprints (command · failure · prerequisite · last verified); `## Proposed additions` + `## Event log` append-only. Log to `## Event log`: sub-goal complete (PR # + wall), reviewer feedback addressed, blocker resolved, heartbeat, decisions, final summary.
 
-**Log to NOTES.md as you go** — one-line entries: sub-goal complete (PR # + wall time), reviewer feedback addressed, block, heartbeat when running long, cross-cutting decisions, proposed sub-goals under `## Proposed additions`. Append-only.
+**FEEDBACK.md (optional).** Friction the skill should prevent, missing tooling, codebase structure issues, contradictory pointer-prompt rules — append a paragraph under the right category. Input for improving the skill, not for run-of-the-mill events.
 
 **Hard rules — not optional:**
 - ONE open PR per sub-goal via ghstack. Zero PRs (local diff only) is an unstarted sub-goal. One mega-PR is a failure mode.
-- A checked box is `- [x] — PR #N` for an actual open PR, or it's not checked. Local tests passing is NOT "CI green" — only the open PR's CI counts.
+- A checked box is `- [x] — PR #N` for an open PR, or it's not checked. Local tests passing is NOT "CI green".
+- Each sub-goal's verification = its file's "How to close the loop". Generic repo tests are a baseline, not sub-goal verification.
 - Don't merge PRs — human's gate.
 - Don't rewrite a sub-goal's `Done =` or directional outcome mid-loop.
-- Don't invent sub-goals — propose in NOTES.md, continue with existing roadmap.
-- Don't amend earlier sub-goals' commits from a later branch — use a fix-up on the current branch. (Review-feedback fixes on the same PR's own branch are fine.)
+- Don't invent sub-goals — propose in `## Proposed additions`.
+- Don't amend earlier sub-goals' commits from a later branch — use a fix-up on the current branch.
+- Don't append duplicate stop summaries for unchanged blockers — bump the `## Active blockers` timestamp.
 - Don't burn the loop on one stuck problem.
 
-**Stack audit before stopping:** run `gh pr list --state open --search "head:gh/$(gh api user --jq .login)/auth-rewrite/"`. Confirm one open PR per sub-goal. Any checked sub-goal without a matching PR → box is invalid; unmark it and keep working. Only after the audit passes do you stop.
+**Stack audit before stopping:** extract every `PR #N` from ROADMAP.md; `gh pr view <N>` each to confirm open + CI green + /code-review clean. Any checked sub-goal whose PR fails → box invalid; unmark and keep working. (Don't branch-name search — ghstack uses numeric heads.)
 
-**Stop only when** the stack audit confirms success, every remaining sub-goal is blocked (after once-each retry), or the token budget is exhausted. On any stop, write a final summary to NOTES.md — outcome, PRs with #, time, blockers, reviewer requests addressed/pending.
+**Stop only when** the stack audit confirms success, every remaining sub-goal is blocked with unchanged prerequisites, or token budget exhausted. On stop, append final summary to `## Event log` — outcome, PRs (#), time, blockers (point at `## Active blockers`), reviewer requests.
 
 `Done =` every sub-goal in ROADMAP.md is `- [x] — PR #N` for an actual open PR AND each `Done =` is proven against the PR's current state (CI status, /code-review verdict, PR file contents), not local state.
 ```
