@@ -121,7 +121,7 @@ Users don't notice the swap. Boring, bulletproof: the team stops thinking about 
 
 ### Step 4 — The pointer prompt (this is what the user pastes into `/goal`)
 
-Measured at **3,847 characters** — under the 4000 cap. (The autonomy/hard-rules prompt is large by design — every line in it is preventing an observed failure mode, not micromanaging tactics.)
+Measured at **3,958 characters** — under the 4000 cap. (The autonomy/hard-rules prompt is large by design — every line in it is preventing an observed failure mode, not micromanaging tactics.)
 
 ```
 Work the mega-goal at `.megagoal/auth-rewrite/ROADMAP.md` using stacked-prs with ghstack. Run autonomously — keep moving and self-handle interruptions, don't wait for human input.
@@ -130,13 +130,13 @@ Work the mega-goal at `.megagoal/auth-rewrite/ROADMAP.md` using stacked-prs with
 
 **Read every turn:** ROADMAP.md, the sub-goal file you're working on, NOTES.md `## Active blockers`. On-disk is authoritative.
 
-**Picking what to work on.** Stack PRs = PR numbers on ROADMAP.md entries (any line with `PR #N`). If any has CHANGES_REQUESTED, fix it before new work: edit on that PR's branch, `ghstack submit`, reply. Only halt is "do not proceed". Open PRs NOT in the stack are informational unless they target the same files or block this stack's CI. Otherwise work the next unchecked sub-goal whose dependencies are checked. If its `Done =` is already true, check the box and continue. If all remaining sub-goals are blocked, retry one only if its `Prerequisite:` in `## Active blockers` has actually changed since `Last verified:`. If unchanged, bump the timestamp and skip. If nothing retries, stop.
+**Picking what to work on.** Stack PRs = PR numbers on ROADMAP.md entries (any line with `PR #N`). If any has CHANGES_REQUESTED, fix it before new work: edit on that PR's branch, `ghstack submit`, reply. Only halt is "do not proceed". PRs NOT in the stack are informational unless they affect this stack's files or CI. Otherwise work the next unchecked sub-goal whose dependencies are checked. If its `Done =` is already true, check the box and continue. If all remaining sub-goals are blocked, retry one only if its `Prerequisite:` in `## Active blockers` has actually changed since `Last verified:`. If unchanged, bump the timestamp and skip. If nothing retries, stop.
 
 **Working a sub-goal.** Code on a stacked branch. `ghstack submit` opens/updates the PR — immediately append `— PR #N` to the roadmap entry (still `- [ ]`). PR body's static block comes from the sub-goal file's `## PR body`; fill in `## What changed` and `## Verification` from the diff. Wait for `gh pr checks <pr>` green (NOT local tests). Run `/code-review <pr>`. Fix high-severity findings on the same branch; skip nits. If a failure persists after fixing the obvious cause more than once, add a `## Active blockers` line and hop.
 
-**NOTES.md** (3 sections — see `notes-template.md`): `## Active blockers` updated in place with fingerprints (command · failure · prerequisite · last verified); `## Proposed additions` + `## Event log` append-only. Log to `## Event log`: sub-goal complete (PR # + wall), reviewer feedback addressed, blocker resolved, heartbeat, decisions, final summary.
+**NOTES.md** (see `notes-template.md` for 3 sections): `## Active blockers` updated in place; `## Proposed additions` and `## Event log` append-only. Blocker fingerprints: command · failure · prerequisite · last verified.
 
-**FEEDBACK.md (optional).** Friction the skill should prevent, missing tooling, codebase structure issues, contradictory pointer-prompt rules — append a paragraph under the right category. Input for improving the skill, not for run-of-the-mill events.
+**FEEDBACK.md (optional).** Append paragraphs about workflow friction, missing tooling, codebase issues, or contradictory rules — input to improve the skill.
 
 **Hard rules — not optional:**
 - ONE open PR per sub-goal via ghstack. Zero PRs (local diff only) is an unstarted sub-goal. One mega-PR is a failure mode.
@@ -151,9 +151,14 @@ Work the mega-goal at `.megagoal/auth-rewrite/ROADMAP.md` using stacked-prs with
 
 **Stack audit before stopping:** extract every `PR #N` from ROADMAP.md; `gh pr view <N>` each to confirm open + CI green + /code-review clean. Any checked sub-goal whose PR fails → box invalid; unmark and keep working. (Don't branch-name search — ghstack uses numeric heads.)
 
-**Stop only when** the stack audit confirms success, every remaining sub-goal is blocked with unchanged prerequisites, or token budget exhausted. On stop, append final summary to `## Event log` — outcome, PRs (#), time, blockers (point at `## Active blockers`), reviewer requests.
+**Stop only when** stack audit passes, every remaining sub-goal is blocked with unchanged prerequisites, or token budget exhausted. **On the FIRST stop turn**, append final summary to `## Event log` (outcome, PRs (#), time, blockers point at `## Active blockers`, reviewer requests). **On subsequent stops** — final summary already present, no prerequisite changed, no stack PR moved — emit ONLY this banner; do NOT re-run audit or re-append summary:
 
-`Done =` every sub-goal in ROADMAP.md is `- [x] — PR #N` for an actual open PR AND each `Done =` is proven against the PR's current state (CI status, /code-review verdict, PR file contents), not local state.
+```
+🛑 LOOP BLOCKED — STOP /goal MANUALLY
+All sub-goals blocked, prerequisites unchanged. Codex has no pause; loop fires until halted. Resume: stop /goal, wait for prerequisite change, re-paste prompt. Blockers: ## Active blockers.
+```
+
+`Done =` every sub-goal in ROADMAP.md is `- [x] — PR #N` for an open PR AND each `Done =` proven against PR state (CI, /code-review verdict, files), not local.
 ```
 
 ---

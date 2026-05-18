@@ -100,6 +100,8 @@ Every file under `goals/` IS a `plan-for-goal` output — same anchors (`Goal`, 
    > - **`ghstack`** — `pip install ghstack && ghstack auth`
    >
    > Without these, the loop will produce a single local change set instead of a stacked PR series. The pointer prompt's turn-1 pre-flight catches missing tools and stops the loop, but the banner prevents the wasted-time failure mode upstream.
+   >
+   > **Also: codex has no pause primitive.** `/goal` only has "complete" (which the loop won't trigger while sub-goals remain unfinished) or "continue". If the loop becomes blocked on external prerequisites (PR not yet merged, workflow not yet on default branch, missing credential, human gate), you'll see repeated `🛑 LOOP BLOCKED` messages — that means it's waiting on you. **Stop `/goal` manually from your harness.** Re-paste `.megagoal/<slug>/POINTER_PROMPT.md` once a prerequisite changes.
 
    If step 1 found something missing locally, sharpen the banner: e.g. *"You currently have `gh` but not `ghstack` here — install before pasting, or ensure it's installed wherever you run `/goal`."*
 
@@ -129,6 +131,7 @@ These are autonomy boundaries AND the workflow shape itself, not productivity ta
 - **Retry blocked sub-goals only when the prerequisite has changed since `Last verified`.** If unchanged, bump the timestamp and skip the retry — no-op retries waste turns.
 - **Each sub-goal has its own verification path — generic test runs are not enough.** Every sub-goal file's "How to close the loop" must include sub-goal-specific commands or surfaces (a specific test file, browser flow, CLI invocation, or grep) that prove THIS sub-goal's outcome. Generic `bun run test` / `pnpm test` is a baseline — not sub-goal verification.
 - **Stack PRs are the PRs whose numbers appear on roadmap entries.** Open PRs NOT in that set are informational unless they target the same files or block this stack's CI — don't react to unrelated review activity.
+- **Fast-stop emits a human-action banner, not repeated audits.** Codex has no pause primitive — `/goal` only has "complete" (forbidden while sub-goals remain) or "continue". When the loop hits the blocked-with-unchanged-prerequisites state, it will keep firing turns until the human halts it externally. The pointer prompt must encode: on the FIRST fast-stop, append the final summary to `## Event log`. On subsequent fast-stops (final summary already present, no prerequisite changed, no PR moved), emit ONLY a short `🛑 LOOP BLOCKED — STOP /goal MANUALLY` banner. Don't re-run the audit, don't re-append the summary. Otherwise the loop burns tokens emitting the same blocked state every turn — observed in a real run that fired ~30 identical "fast-stop applies" messages before being halted.
 
 ## The whole scaffold guides the loop, not just the pointer prompt
 
