@@ -2,6 +2,18 @@
 name: greenlight-pr
 description: Greenlight a PR — fix CI failures, triage review comments, iterate until green.
 argument-hint: "[PR number or URL]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill greenlight-pr --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill greenlight-pr --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Greenlight PR
@@ -197,3 +209,13 @@ Phase 3 — ACT
 - `references/triage-process.md` — Sub-agent prompts, decision pseudocode, quality checks, reply templates
 - `references/ci-classification.md` — Branch vs flaky heuristics
 - `references/known-bots.md` — AI review bot catalog and re-review patterns
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill greenlight-pr --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

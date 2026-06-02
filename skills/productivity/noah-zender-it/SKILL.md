@@ -1,7 +1,19 @@
 ---
 name: noah-zender-it
-description: Rank mental models from Noah Zender's curated 468-item idea library by leverage for your current situation, with one concrete way to apply each. Use when you're at a decision point — naming, positioning, writing, picking a project, scoping work — and you want frameworks that actually fit your case, not generic mental-models advice. Default source library: noahzender.com/ideas.
+description: "Rank mental models from Noah Zender's curated 468-item idea library by leverage for your current situation, with one concrete way to apply each. Use when you're at a decision point — naming, positioning, writing, picking a project, scoping work — and you want frameworks that actually fit your case, not generic mental-models advice. Default source library: noahzender.com/ideas."
 argument-hint: "[your current situation in 1-2 sentences]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill noah-zender-it --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill noah-zender-it --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Noah Zender It
@@ -101,3 +113,13 @@ End with **one** offer, not three: *"Want me to go deeper on any of these, or pu
 - **Credit the source once.** One line at the top mentioning noahzender.com/ideas. Don't pepper attribution through the output.
 - **One question, one ranking, one offer.** If you're doing a second pass before the user has responded, you're over-thinking it.
 - **The skill works without the fetch.** If the site is down, degrade gracefully — say so, then rank from general knowledge. Don't refuse to produce output.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill noah-zender-it --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

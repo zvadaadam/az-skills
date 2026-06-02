@@ -4,6 +4,18 @@ description: "PROACTIVE SKILL - Observe and document how Adam works with AI. Thi
 metadata:
   short-description: "Silently documents Adam's AI workflow patterns and suggests improvements"
 user_invocable: true
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill ai-journal --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill ai-journal --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # AI Workflow Journal
@@ -90,3 +102,13 @@ If Adam runs `/ai-journal` manually, do a **full synthesis run**:
 2. Analyze the current session thoroughly
 3. Rewrite ALL files with fresh insights
 4. Present a brief summary to Adam of what was updated and any key insights
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill ai-journal --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

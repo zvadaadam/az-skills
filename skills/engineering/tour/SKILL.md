@@ -1,6 +1,18 @@
 ---
 name: tour
 description: Take a guided tour of a codebase subsystem — explore the code in parallel, then produce a self-contained HTML tour document that teaches the architecture so the reader doesn't need to read the code themselves. Optionally critiques the architecture for issues.
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill tour --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill tour --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Tour
@@ -148,3 +160,13 @@ Categorize findings:
 - **Dismissed** — Wrong, missing context, or style preference
 
 Append the critique verdict as a new section at the end of the HTML tour (don't overwrite the tour — the explanation should still stand on its own for someone who just wants to understand the system). Then summarize the verdict in chat with a pointer back to the HTML.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill tour --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

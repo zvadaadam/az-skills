@@ -1,6 +1,18 @@
 ---
 name: repo-history-book
 description: Build a durable, evidence-backed "book" of how an engineering project evolved by mining git history, PRs, releases, and docs. Use when the user wants repository archaeology, commit-by-commit walkthroughs, engineering learning extraction, pivot analysis, or a readable chronology of what the team changed, learned, reverted, and refined over time.
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill repo-history-book --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill repo-history-book --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Repo History Book
@@ -289,3 +301,13 @@ When the user asks for HTML, prefer a polished interactive artifact with:
 - raw-note backlinks
 
 Use `references/html-book-experience.md`.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill repo-history-book --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

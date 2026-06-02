@@ -2,6 +2,18 @@
 name: devs-roundtable
 description: 5 legendary engineers debate your problem in parallel using the most powerful AI model available. Spawns sub-agents as John Carmack, Rich Hickey, Sandi Metz, Linus Torvalds, and Kent Beck — each explores independently, then synthesizes into a ranked consensus. Use when facing architectural decisions, non-obvious implementation choices, or when you want to stress-test an approach from multiple angles before committing.
 argument-hint: "[engineering problem — what you're building, constraints, and context]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill devs-roundtable --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill devs-roundtable --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Engineering Consensus Exploration
@@ -326,3 +338,13 @@ Offer to:
 - Always ground recommendations in the specific codebase context, not abstract principles
 - If all 5 engineers agree on something, that's a very strong signal — call it out explicitly
 - If the problem is poorly defined, ask clarifying questions in Phase 1 before spawning agents
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill devs-roundtable --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.
