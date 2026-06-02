@@ -10,16 +10,19 @@ import os
 import tempfile
 import sys
 import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
+from telemetry_common import (
+    POSTHOG_PROJECT_API_KEY,
+    parse_context,
+    send_to_posthog,
+    short_hash,
+    telemetry_identity,
+)
 
-POSTHOG_HOST = "https://us.i.posthog.com"
-POSTHOG_PROJECT_API_KEY = "phc_sfAyXEAyfo9KqR7qdQMrqigeAHPuFvQ86Rfr56qYYfJT"
-EVENT_NAME = "skill_event"
-ACTIONS = ("started", "completed")
+EVENTS = ("skill_read", "skill_activated")
 
 
 def read_hook_input() -> dict[str, Any]:
@@ -38,50 +41,79 @@ def read_hook_input() -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def short_hash(value: Any) -> str | None:
-    if not value:
-        return None
-    return hashlib.sha256(str(value).encode()).hexdigest()[:16]
+def hook_file_path(hook_input: dict[str, Any]) -> str:
+    tool_input = hook_input.get("tool_input")
+    if not isinstance(tool_input, dict):
+        return ""
+    return str(tool_input.get("file_path") or tool_input.get("path") or "").strip()
 
 
-def parse_context(values: list[str]) -> dict[str, str]:
-    context: dict[str, str] = {}
-    for value in values:
-        if "=" not in value:
-            raise ValueError("--context must be key=value")
-        key, raw = value.split("=", 1)
-        key = key.strip()
-        if not key:
-            raise ValueError("--context key cannot be empty")
-        context[key] = raw.strip()[:500]
-    return context
+def skill_from_file_path(file_path: str) -> str:
+    if not file_path:
+        return ""
+
+    path = Path(file_path)
+    if path.name != "SKILL.md":
+        return ""
+
+    parts = path.parts
+    for index, part in enumerate(parts):
+        if part != "skills":
+            continue
+        if index + 2 < len(parts) and parts[index + 2] == "SKILL.md":
+            return parts[index + 1]
+        if index + 3 < len(parts) and parts[index + 3] == "SKILL.md":
+            return parts[index + 2]
+
+    return ""
+
+
+def resolve_event(args: argparse.Namespace) -> str:
+    if args.event:
+        return args.event
+
+    legacy_action = (args.action or "").strip()
+    if legacy_action == "started":
+        return "skill_activated"
+    if legacy_action in {"skill_read", "skill_activated"}:
+        return legacy_action
+    if legacy_action == "completed":
+        return ""
+    raise ValueError("--event is required")
 
 
 def event_payload(
     args: argparse.Namespace,
     hook_input: dict[str, Any],
 ) -> dict[str, Any]:
-    action = args.action.strip()
+    event_name = resolve_event(args)
     skill = args.skill.strip()
+    if event_name == "skill_read" and skill == "auto":
+        skill = skill_from_file_path(hook_file_path(hook_input))
+
     agent_harness = args.agent_harness.strip() or "unknown"
     model_config = args.model_config.strip() or "unknown"
 
     if not skill:
         raise ValueError("--skill cannot be empty")
-    if action not in ACTIONS:
-        raise ValueError(f"--action must be one of: {', '.join(ACTIONS)}")
+    if event_name not in EVENTS:
+        raise ValueError(f"--event must be one of: {', '.join(EVENTS)}")
 
     timestamp = datetime.now(timezone.utc).isoformat()
     session_id_hash = short_hash(hook_input.get("session_id"))
+    distinct_id, identity_properties = telemetry_identity(
+        agent_harness,
+        create_installation=not args.dry_run,
+    )
 
     properties: dict[str, Any] = {
         "$process_person_profile": False,
-        "$insert_id": "skill-event:"
+        "$insert_id": f"{event_name}:"
         + hashlib.sha256(
             json.dumps(
                 {
                     "skill": skill,
-                    "action": action,
+                    "event": event_name,
                     "agent_harness": agent_harness,
                     "model_config": model_config,
                     "session_id_hash": session_id_hash,
@@ -91,12 +123,12 @@ def event_payload(
             ).encode()
         ).hexdigest()[:32],
         "source": "az-skills",
-        "schema_version": 1,
+        "schema_version": 2,
         "skill": skill,
-        "action": action,
         "agent_harness": agent_harness,
         "model_config": model_config,
     }
+    properties.update(identity_properties)
 
     if session_id_hash:
         properties["session_id_hash"] = session_id_hash
@@ -107,24 +139,24 @@ def event_payload(
 
     return {
         "api_key": POSTHOG_PROJECT_API_KEY,
-        "event": EVENT_NAME,
-        "distinct_id": f"az-skills-events:{agent_harness}",
+        "event": event_name,
+        "distinct_id": distinct_id,
         "timestamp": timestamp,
         "properties": properties,
     }
 
 
-def started_marker_path(skill: str, session_id_hash: str) -> str:
+def activation_marker_path(skill: str, session_id_hash: str) -> str:
     marker_id = hashlib.sha256(f"{skill}:{session_id_hash}".encode()).hexdigest()[:24]
-    return os.path.join(tempfile.gettempdir(), f"az-skills-started-{marker_id}")
+    return os.path.join(tempfile.gettempdir(), f"az-skills-activated-{marker_id}")
 
 
-def should_send_started(
+def should_send_activation(
     args: argparse.Namespace,
     hook_input: dict[str, Any],
     dry_run: bool = False,
 ) -> bool:
-    if args.action != "started":
+    if resolve_event(args) != "skill_activated":
         return False
 
     session_id_hash = short_hash(hook_input.get("session_id"))
@@ -133,7 +165,7 @@ def should_send_started(
     if dry_run:
         return True
 
-    marker = started_marker_path(args.skill.strip(), session_id_hash)
+    marker = activation_marker_path(args.skill.strip(), session_id_hash)
     try:
         fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError:
@@ -145,26 +177,11 @@ def should_send_started(
     return True
 
 
-def send(payload: dict[str, Any]) -> None:
-    url = urllib.parse.urljoin(POSTHOG_HOST.rstrip("/") + "/", "i/v0/e/")
-    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    request = urllib.request.Request(
-        url,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "az-skills/skill-event",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=5) as response:
-        response.read()
-
-
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skill", required=True)
-    parser.add_argument("--action", required=True, choices=ACTIONS)
+    parser.add_argument("--event", choices=EVENTS)
+    parser.add_argument("--action", help=argparse.SUPPRESS)
     parser.add_argument("--agent-harness", default="unknown")
     parser.add_argument("--model-config", default="unknown")
     parser.add_argument(
@@ -183,9 +200,17 @@ def main(argv: list[str]) -> int:
     hook_input = read_hook_input()
 
     try:
-        if args.action == "started" and not should_send_started(args, hook_input, args.dry_run):
+        event_name = resolve_event(args)
+        if not event_name:
+            return 0
+        if event_name == "skill_read" and args.skill.strip() == "auto":
+            if not skill_from_file_path(hook_file_path(hook_input)):
+                return 0
+        if event_name == "skill_activated" and not should_send_activation(
+            args, hook_input, args.dry_run
+        ):
             if not args.quiet:
-                print(f"skill-event: skipped duplicate started event for {args.skill}")
+                print(f"skill-event: skipped duplicate activation event for {args.skill}")
             return 0
         payload = event_payload(args, hook_input)
     except ValueError as exc:
@@ -200,14 +225,14 @@ def main(argv: list[str]) -> int:
         return 0
 
     try:
-        send(payload)
+        send_to_posthog(payload, user_agent="az-skills/skill-event", timeout=5)
     except (OSError, urllib.error.HTTPError, urllib.error.URLError) as exc:
         if not args.quiet:
             print(f"skill-event: {exc}", file=sys.stderr)
         return 0 if args.quiet else 1
 
     if not args.quiet:
-        print(f"sent skill event: {args.skill} {payload['properties']['action']}")
+        print(f"sent {payload['event']}: {payload['properties']['skill']}")
     return 0
 
 
