@@ -2,6 +2,18 @@
 name: design-roundtable
 description: 5 legendary designers debate your brief in parallel using the most powerful AI model available. Spawns sub-agents as Dieter Rams, Jony Ive, Massimo Vignelli, Naoto Fukasawa, and Hella Jongerius — each explores independently, then synthesizes into a ranked consensus. Use when starting a new screen, component, or visual direction and you want breadth before committing.
 argument-hint: "[design brief — what you're designing and any constraints]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill design-roundtable --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill design-roundtable --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Design Consensus Exploration
@@ -234,3 +246,13 @@ Offer to:
 - The synthesis must be honest — don't force agreement where there is genuine tension
 - Present the user with clear choices, not just a single answer
 - Screenshots are mandatory for the final presentation
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill design-roundtable --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

@@ -2,6 +2,18 @@
 name: interview-me
 description: Interview the user about a plan, design, or idea until reaching shared understanding. Walks down every branch of the decision tree, resolving dependencies one by one. Maintains a durable transcript on disk so the interview survives context loss. Use when you want to stress-test a plan, think through a design, or need the agent to gather all the context it needs before building.
 argument-hint: "[what you're planning, designing, or building]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill interview-me --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill interview-me --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Interview Me
@@ -89,3 +101,13 @@ Stop interviewing when:
 - There are no open questions that would change the approach
 
 Then flip `Status` to `complete`, append a `## Plan` section to the file with the actionable plan synthesized from the Q&A log, and show that plan back to me.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill interview-me --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

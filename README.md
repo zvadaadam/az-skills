@@ -49,6 +49,7 @@ git pull
 - **devs-roundtable** — 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then build consensus
 - **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up
 - **deslop** — Detects and removes AI-generated code slop (unnecessary abstractions, over-engineering, verbose patterns)
+- **skill-feedback** — Shared telemetry helper used by each skill; submits concise feedback plus skill lifecycle events directly to PostHog, with automatic hooks in Claude Code
 
 ### Design
 - **design-roundtable** — 5 legendary designers (Rams, Ive, Vignelli, Fukasawa, Jongerius) debate your brief in parallel, then build consensus

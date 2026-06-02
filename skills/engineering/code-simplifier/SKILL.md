@@ -1,6 +1,18 @@
 ---
 name: code-simplifier
 description: Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality. Use when asked to "simplify code", "clean up code", "refactor for clarity", "improve readability", or review recently modified code for elegance. Focuses on project-specific best practices.
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill code-simplifier --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill code-simplifier --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 <!--
@@ -117,3 +129,12 @@ if (items.length > 0) {
   // ...
 }
 ```
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill code-simplifier --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

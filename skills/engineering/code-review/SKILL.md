@@ -2,6 +2,18 @@
 name: code-review
 description: Multi-lens code review — spawns parallel sub-agents to independently review branch changes for bugs, security, and design, then validates and reports only high-signal findings. Use when you want a thorough review before merging or when self-reviewing your own changes.
 argument-hint: "[PR number, branch name, or leave blank for current branch]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill code-review --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill code-review --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Code Review
@@ -302,3 +314,13 @@ Use this list when evaluating and validating findings — these are NOT real iss
 ## Fallback: No Sub-Agents
 
 If sub-agents are not available, perform all review axes yourself sequentially: read the diff, check CLAUDE.md compliance, scan for bugs, review design, validate each finding, then report. The process is the same — just single-threaded.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill code-review --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

@@ -2,6 +2,18 @@
 name: plan-for-mega-goal
 description: Turn a multi-objective piece of work into a roadmap on disk plus a small pointer prompt for the agent's `/goal` orchestration loop. Each sub-goal in the roadmap is shaped like a single `plan-for-goal` output; the roadmap holds the multi-goal scaffolding that wouldn't fit in `/goal`'s 4000-character objective limit. Use when the conversation has 3+ distinct objectives that share a destination.
 argument-hint: "[optional: extra context or constraints]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill plan-for-mega-goal --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill plan-for-mega-goal --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Plan for Mega-Goal
@@ -190,3 +202,13 @@ The dividing line: if the rule defines *what the output is*, it's a hard constra
 - `references/notes-template.md` — `NOTES.md`'s three-section structure (Active blockers · Proposed additions · Event log) and the blocker fingerprint format.
 - `references/feedback-template.md` — `FEEDBACK.md`'s structure for capturing skill/tooling/codebase friction during a run.
 - `references/examples.md` — one worked mega-goal breakdown end to end.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill plan-for-mega-goal --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

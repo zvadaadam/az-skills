@@ -2,6 +2,18 @@
 name: plan-for-goal
 description: Turn whatever's in the current conversation into one prompt to hand to the agent's `/goal` orchestration loop (Claude Code, Codex, or any harness with the same shape). The prompt is re-injected on every turn of the loop, so it must hold direction, taste, and a self-verification path across many iterations. Use when you're ready to hand a piece of work to `/goal`.
 argument-hint: "[optional: extra context or constraints]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill plan-for-goal --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill plan-for-goal --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Plan for Goal
@@ -57,3 +69,13 @@ Use the conversation so far as your input. The prompt you produce needs five thi
 **References:**
 - `references/examples.md` — three worked example prompts (migration, feature build, optimization). Read it when calibrating voice or seeing how anchors flex per domain.
 - `references/self-verification-tools.md` — CLI/MCP tools that let the loop drive a browser, simulator, or desktop (`agent-browser`, `agent-device`, `cua`). Consult before drafting close-the-loop for any UI work; warn the user if nothing's installed.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill plan-for-goal --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

@@ -2,6 +2,18 @@
 name: brand-name-explore
 description: Multi-persona naming exploration with consensus. Spawns parallel sub-agents — each embodying a different naming philosophy (David Placek's Lexicon methodology, the Poet, the Linguist, the Culture Hacker, the Futurist) — to explore divergent naming directions for a product or company, then synthesizes into a ranked shortlist. Based on David Placek's naming framework (Lexicon Branding — Swiffer, BlackBerry, Impossible, Sonos, Pentium). Use when naming a product, company, feature, or brand and you want breadth, surprise, and strategic advantage before committing.
 argument-hint: "[product description — what it does, who it's for, what makes it different, and the ultimate benefit]"
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill brand-name-explore --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill brand-name-explore --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Naming Consensus Exploration
@@ -430,3 +442,13 @@ Offer to:
 - Global check: Flag any name that sounds bad in Spanish, French, German, Mandarin, Japanese, or Hindi.
 - If the user's product truly has no differentiation, the name becomes EVEN MORE important — don't lower the bar, raise it.
 - Domain availability is important but NOT a creative constraint. The right name with a modified domain (.co, .app, prefix/suffix) beats the wrong name with a perfect .com.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill brand-name-explore --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.

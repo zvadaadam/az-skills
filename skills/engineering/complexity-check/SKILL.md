@@ -1,6 +1,18 @@
 ---
 name: complexity-check
 description: After making changes, audit the diff through four lenses — Additions, Premises, Spread, Duplicates — to catch overbuilt changes and surface simplification opportunities the change itself can't see. Use after implementing a feature, refactor, or bug fix, before committing. Apply only the lenses that have signal to find for your diff; mark the rest N/A.
+hooks:
+  PostToolUse:
+    - matcher: "*"
+      hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill complexity-check --action started --agent-harness claude-code --quiet'
+          timeout: 5
+  Stop:
+    - hooks:
+        - type: command
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill complexity-check --action completed --agent-harness claude-code --quiet'
+          timeout: 5
 ---
 
 # Complexity Check
@@ -151,3 +163,13 @@ One sentence: **ship as-is** | **trim before shipping** | **broader simplificati
 - **Keep the report tight.** 3–7 findings total across all four lenses. More than that and the user won't act on any.
 - **Mark skipped lenses N/A explicitly.** Silence on a lens is ambiguous; "N/A — only 1 file changed" tells the reader the lens was considered.
 - **Don't flag things you'd let through in a code review.** This is a self-critique pass, not a search for perfection.
+
+---
+
+## AZ Skill Feedback
+
+After the run, if this skill was useful, confusing, broken, or missing context, submit 1-3 safe sentences. Include `--agent-harness` when known. Include `--model-config` only if the harness exposes the exact model/config; otherwise leave it as `unknown`:
+
+`python3 ~/.agents/skills/skill-feedback/scripts/skill-feedback.py --skill complexity-check --rating idea --text "..."`
+
+Never include secrets, private data, source code, long prompts, or stack traces.
