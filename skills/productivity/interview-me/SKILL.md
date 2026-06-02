@@ -7,12 +7,7 @@ hooks:
     - matcher: "*"
       hooks:
         - type: command
-          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill interview-me --action started --agent-harness claude-code --quiet'
-          timeout: 5
-  Stop:
-    - hooks:
-        - type: command
-          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill interview-me --action completed --agent-harness claude-code --quiet'
+          command: 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill interview-me --event skill_activated --agent-harness claude-code --quiet'
           timeout: 5
 ---
 

@@ -40,6 +40,90 @@ spin() {
   printf "\r%s" "$clear_line"
 }
 
+configure_claude_skill_read_hook() {
+  python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+settings_path = Path.home() / ".claude" / "settings.json"
+settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+command = 'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill auto --event skill_read --agent-harness claude-code --quiet'
+legacy_commands = {
+    'python3 "$HOME/.claude/skills/skill-feedback/scripts/skill-event.py" --skill auto --action skill_read --agent-harness claude-code --quiet',
+}
+handler = {
+    "type": "command",
+    "command": command,
+    "timeout": 5,
+}
+
+try:
+    if settings_path.exists():
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    else:
+        settings = {}
+except json.JSONDecodeError:
+    print("skip")
+    raise SystemExit(0)
+
+if not isinstance(settings, dict):
+    print("skip")
+    raise SystemExit(0)
+
+hooks = settings.setdefault("hooks", {})
+if not isinstance(hooks, dict):
+    print("skip")
+    raise SystemExit(0)
+
+post_tool_use = hooks.setdefault("PostToolUse", [])
+if not isinstance(post_tool_use, list):
+    print("skip")
+    raise SystemExit(0)
+
+for group in post_tool_use:
+    if not isinstance(group, dict):
+        continue
+    handlers = group.get("hooks")
+    if not isinstance(handlers, list):
+        continue
+    group["hooks"] = [
+        existing
+        for existing in handlers
+        if not (isinstance(existing, dict) and existing.get("command") in legacy_commands)
+    ]
+
+for group in post_tool_use:
+    if not isinstance(group, dict):
+        continue
+    for existing in group.get("hooks", []):
+        if isinstance(existing, dict) and existing.get("command") == command:
+            print("unchanged")
+            raise SystemExit(0)
+
+read_group = None
+for group in post_tool_use:
+    if isinstance(group, dict) and group.get("matcher") == "Read":
+        read_group = group
+        break
+
+if read_group is None:
+    read_group = {"matcher": "Read", "hooks": []}
+    post_tool_use.append(read_group)
+
+read_group_hooks = read_group.setdefault("hooks", [])
+if not isinstance(read_group_hooks, list):
+    print("skip")
+    raise SystemExit(0)
+
+read_group_hooks.append(handler)
+settings_path.write_text(json.dumps(settings, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+os.chmod(settings_path, 0o600)
+print("installed")
+PY
+}
+
 cleanup() { printf "%s" "$show_cursor"; }
 trap cleanup EXIT
 printf "%s" "$hide_cursor"
@@ -149,6 +233,8 @@ for skill_md in $(find "$REPO"/skills -mindepth 3 -maxdepth 3 -name SKILL.md 2>/
   fi
 done
 
+claude_read_hook_status="$(configure_claude_skill_read_hook)"
+
 # ── Summary ─────────────────────────────────────────
 total=$((n_linked + n_replaced + n_backed + n_unchanged))
 
@@ -176,4 +262,9 @@ for i in "${!parts[@]}"; do
 done
 
 echo "  ${bold}${total} skills${reset}  ${summary}"
+case "$claude_read_hook_status" in
+  installed) echo "  ${green}◆${reset} claude skill-read hook  ${dim}installed${reset}" ;;
+  unchanged) echo "  ${dim}◇ claude skill-read hook${reset}" ;;
+  *) echo "  ${yellow}◆${reset} claude skill-read hook  ${dim}skipped: invalid ~/.claude/settings.json${reset}" ;;
+esac
 echo ""

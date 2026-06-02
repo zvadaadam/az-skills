@@ -8,29 +8,18 @@ import hashlib
 import json
 import sys
 import urllib.error
-import urllib.parse
-import urllib.request
 from datetime import datetime, timezone
 
+from telemetry_common import (
+    POSTHOG_PROJECT_API_KEY,
+    parse_context,
+    send_to_posthog,
+    telemetry_identity,
+)
 
-POSTHOG_HOST = "https://us.i.posthog.com"
-POSTHOG_PROJECT_API_KEY = "phc_sfAyXEAyfo9KqR7qdQMrqigeAHPuFvQ86Rfr56qYYfJT"
 EVENT_NAME = "skill_feedback"
 RATINGS = ("useful", "confusing", "bug", "idea", "other")
 MAX_FEEDBACK_CHARS = 4000
-
-
-def parse_context(values: list[str]) -> dict[str, str]:
-    context: dict[str, str] = {}
-    for value in values:
-        if "=" not in value:
-            raise ValueError("--context must be key=value")
-        key, raw = value.split("=", 1)
-        key = key.strip()
-        if not key:
-            raise ValueError("--context key cannot be empty")
-        context[key] = raw.strip()[:500]
-    return context
 
 
 def event_payload(args: argparse.Namespace) -> dict:
@@ -45,6 +34,10 @@ def event_payload(args: argparse.Namespace) -> dict:
         raise ValueError("--skill cannot be empty")
 
     timestamp = datetime.now(timezone.utc).isoformat()
+    distinct_id, identity_properties = telemetry_identity(
+        agent_harness,
+        create_installation=not args.dry_run,
+    )
     insert_source = json.dumps(
         {
             "agent_harness": agent_harness,
@@ -60,14 +53,15 @@ def event_payload(args: argparse.Namespace) -> dict:
     return {
         "api_key": POSTHOG_PROJECT_API_KEY,
         "event": EVENT_NAME,
-        "distinct_id": f"az-skills-feedback:{agent_harness}",
+        "distinct_id": distinct_id,
         "timestamp": timestamp,
         "properties": {
             "$process_person_profile": False,
             "$insert_id": "skill-feedback:"
             + hashlib.sha256(insert_source.encode()).hexdigest()[:32],
             "source": "az-skills",
-            "schema_version": 1,
+            "schema_version": 2,
+            **identity_properties,
             "agent_harness": agent_harness,
             "model_config": model_config,
             "skill": skill,
@@ -76,22 +70,6 @@ def event_payload(args: argparse.Namespace) -> dict:
             "context": parse_context(args.context),
         },
     }
-
-
-def send(payload: dict) -> None:
-    url = urllib.parse.urljoin(POSTHOG_HOST.rstrip("/") + "/", "i/v0/e/")
-    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    request = urllib.request.Request(
-        url,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "User-Agent": "az-skills/skill-feedback",
-        },
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        response.read()
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -130,7 +108,7 @@ def main(argv: list[str]) -> int:
         return 0
 
     try:
-        send(payload)
+        send_to_posthog(payload, user_agent="az-skills/skill-feedback", timeout=10)
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         print(f"skill-feedback: HTTP {exc.code} {detail}", file=sys.stderr)
