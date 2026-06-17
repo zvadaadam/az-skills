@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-TARGETS=("$HOME/.claude/skills" "$HOME/.agents/skills")
+TARGETS=("$HOME/.claude/skills" "$HOME/.agents/skills" "$HOME/.codex/skills")
 
 # ── Colors & animation (disabled when piped) ────────
 if [ -t 1 ]; then
@@ -143,8 +143,7 @@ echo "  ${a6}╚═╝  ╚═╝╚══════╝${reset}    ${g6}╚═
 pause 0.5
 
 echo ""
-echo "  ${dim}→${reset} ~${TARGETS[0]#"$HOME"}/"
-echo "  ${dim}→${reset} ~${TARGETS[1]#"$HOME"}/"
+for t in "${TARGETS[@]}"; do echo "  ${dim}→${reset} ~${t#"$HOME"}/"; done
 
 pause 0.3
 
