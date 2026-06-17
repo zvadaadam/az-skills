@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-TARGETS=("$HOME/.claude/skills" "$HOME/.agents/skills")
+TARGETS=("$HOME/.claude/skills" "$HOME/.agents/skills" "$HOME/.codex/skills")
 
 # ── Colors & animation (disabled when piped) ────────
 if [ -t 1 ]; then
