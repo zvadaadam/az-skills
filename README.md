@@ -49,6 +49,7 @@ git pull
 - **devs-roundtable** — 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then build consensus
 - **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up
 - **deslop** — Detects and removes AI-generated code slop (unnecessary abstractions, over-engineering, verbose patterns)
+- **pre-factor** — Auto-fires before a feature or non-trivial change: maps the code the change will land in and surfaces the prep refactors that make the change easy (reshape the seam, add a safety net, kill duplication) — each one traced to the upcoming change, landed as its own commit first. The before-bookend to `complexity-check`
 - **skill-feedback** — Shared telemetry helper used by each skill; submits concise feedback plus skill read/activation events directly to PostHog, with automatic hooks in Claude Code and anonymous installation IDs for active-install counts
 
 ### Design
