@@ -1,0 +1,4 @@
+interface:
+  display_name: "Call Worker"
+  short_description: "Fast worker for clean code"
+  default_prompt: "Use $call-worker to delegate a bounded code task to a fast Codex worker."

@@ -1,31 +1,31 @@
 ---
-name: call-claude-fable
-description: Call Claude Code Fable from Codex as an external CLI advisor for hard judgment, architecture, product thinking, frontend/design critique, and high-stakes decisions. Treat Fable as the premium, smartest, most expensive advisor in this local setup. Use when the user asks Codex to consult Fable, call Claude/Fable, get a second opinion, compare another agent's output, improve design quality, reason through a hard problem, start or resume a Claude Code Fable session, reuse Fable session cache, use high thinking/effort Fable, or manage Claude Code background agents while controlling Fable token/cost exposure. Prefer a Codex CLI worker for routine implementation, fast code edits, tests, and mechanical cleanup.
+name: call-advisor
+description: Call the premium Fable advisor through Claude Code CLI from Codex for hard judgment, architecture, product thinking, frontend/design critique, and high-stakes decisions. Treat the advisor as the smartest and most expensive local AI. Use when the user asks to call an advisor, consult Fable/Claude, get a second opinion, compare another agent's output, improve design quality, reason through a hard problem, start or resume an advisor session, reuse advisor/Fable session cache, use high thinking/effort, or manage Claude Code background agents while controlling cost. Prefer call-worker for routine implementation, fast code edits, tests, and mechanical cleanup.
 ---
 
-# Call Claude Fable
+# Call Advisor
 
 ## Overview
 
-Use the local `claude` CLI to call Claude Code with `--model fable` and an explicit effort level. Treat Fable as an external advisor or worker: keep prompts scoped, set `--max-budget-usd`, capture the `session_id`, and resume existing sessions instead of restarting context-heavy work.
+Use the local `claude` CLI to call the Fable model as an external advisor with `--model fable` and an explicit effort level. Keep prompts scoped, set `--max-budget-usd`, capture the `session_id`, and resume existing sessions instead of restarting context-heavy work.
 
 ## Model Role
 
-Treat Fable as the expensive senior advisor in this setup:
+Treat the advisor as the expensive senior judgment model in this setup:
 
 - Best for hard judgment, ambiguous strategy, architecture tradeoffs, product direction, deep debugging hypotheses, security-sensitive reasoning, prompt/agent design, and frontend/design critique.
 - Strong for design taste: visual direction, UX critique, interaction polish, hierarchy, layout, product feel, and "does this look right?" questions.
 - Use when being wrong is expensive, when the main Codex agent wants a serious second opinion, or when a design/architecture choice will shape a lot of downstream work.
-- Avoid for routine implementation, file-by-file cleanup, straightforward test fixes, bulk edits, or cheap verification. Prefer `call-codex-gpt55` for fast worker tasks.
+- Avoid for routine implementation, file-by-file cleanup, straightforward test fixes, bulk edits, or cheap verification. Prefer `call-worker` for fast worker tasks.
 
-Ask Fable for advice, critique, options, or a plan more often than for direct edits. When Fable does produce code, treat it as a proposal and have Codex verify and integrate it.
+Ask the advisor for advice, critique, options, or a plan more often than for direct edits. When the advisor does produce code, treat it as a proposal and have Codex verify and integrate it.
 
 ## Quick Start
 
 Prefer the bundled wrapper because it applies the Fable defaults and handles Claude CLI argument ordering:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
+python3 /path/to/call-advisor/scripts/advisor.py run \
   "Answer in three bullets: what is the narrow next step here?"
 ```
 
@@ -56,7 +56,7 @@ If a run returns `Not logged in - Please run /login`, stop and report that Claud
 2. Start with a narrow, low-budget Fable run:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
+python3 /path/to/call-advisor/scripts/advisor.py run \
   --max-budget-usd 0.25 \
   "Inspect this issue conceptually. Return: finding, confidence, next action."
 ```
@@ -66,7 +66,7 @@ python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
 4. Resume instead of replaying context:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
+python3 /path/to/call-advisor/scripts/advisor.py run \
   --resume SESSION_ID \
   "Continue from the previous answer. Only expand the second bullet."
 ```
@@ -74,10 +74,10 @@ python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
 Use saved-session resume to reuse cache without remembering the id:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py last
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
+python3 /path/to/call-advisor/scripts/advisor.py last
+python3 /path/to/call-advisor/scripts/advisor.py run \
   --resume-last \
-  "Continue from the saved Fable session. Check only the naming question."
+  "Continue from the saved advisor session. Check only the naming question."
 ```
 
 Use `--continue-latest` only when the current directory has exactly the recent Claude session you intend to continue. Use `--fork-session` with `--resume` or `--resume-last` when the continuation should branch from the old context without mutating that session.
@@ -93,8 +93,8 @@ Claude Code exposes "thinking size" through `--effort`. Default to `high` for Fa
 The wrapper accepts both names:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run --thinking high "..."
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run --effort high "..."
+python3 /path/to/call-advisor/scripts/advisor.py run --thinking high "..."
+python3 /path/to/call-advisor/scripts/advisor.py run --effort high "..."
 ```
 
 ## Tools And Permissions
@@ -108,7 +108,7 @@ Default to no Claude tools for pure analysis:
 For codebase work, explicitly choose the smallest tool surface and directory access required:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py run \
+python3 /path/to/call-advisor/scripts/advisor.py run \
   --tools "Read,Grep,Glob" \
   --add-dir "$PWD" \
   "Find the likely source file for this bug. Do not edit files."
@@ -131,7 +131,7 @@ claude --bg "Investigate the failing test and report the smallest fix." \
 List agents for the current workspace:
 
 ```bash
-python3 /path/to/call-claude-fable/scripts/claude_fable.py agents --cwd "$PWD"
+python3 /path/to/call-advisor/scripts/advisor.py agents --cwd "$PWD"
 ```
 
 Use background agents sparingly: they are easy to forget and Fable can become expensive.
@@ -153,7 +153,7 @@ If the wrapper prints an error with `total_cost_usd: 0` and a login message, rep
 Treat wrapper output as an artifact, not just terminal text. By default each non-dry run writes:
 
 ```text
-$CODEX_HOME/external-agent-outputs/claude-fable/<timestamp-session-id>/
+$CODEX_HOME/external-agent-outputs/advisor/<timestamp-session-id>/
   summary.json
   stdout.txt
   stderr.txt
@@ -163,4 +163,4 @@ Use `summary.json` after context compaction to recover the command, cwd, return 
 
 ## Bundled Script
 
-Use `scripts/claude_fable.py` for repeatable runs, dry runs, saved-session resume, output artifact capture, and agent listing. It stores the most recent session in `$AI_AGENT_SESSIONS_PATH` when set, otherwise `$CODEX_HOME/external-agent-sessions.json` or `~/.codex/external-agent-sessions.json`. Read or patch the script if the installed Claude CLI changes flags.
+Use `scripts/advisor.py` for repeatable runs, dry runs, saved-session resume, output artifact capture, and agent listing. It stores the most recent advisor session in `$AI_AGENT_SESSIONS_PATH` when set, otherwise `$CODEX_HOME/external-agent-sessions.json` or `~/.codex/external-agent-sessions.json`. It can still read the previous `claude-fable` state key for migration. Read or patch the script if the installed Claude CLI changes flags.

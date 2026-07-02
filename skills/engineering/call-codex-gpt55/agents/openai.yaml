@@ -1,4 +1,0 @@
-interface:
-  display_name: "Call Codex GPT-5.5"
-  short_description: "Fast worker for clean code"
-  default_prompt: "Use $call-codex-gpt55 to delegate a bounded code task to a fast Codex worker and summarize the result."

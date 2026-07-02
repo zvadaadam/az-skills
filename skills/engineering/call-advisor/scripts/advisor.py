@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Claude Code with Fable defaults and explicit cost guardrails."""
+"""Run the Fable advisor with explicit cost guardrails."""
 
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from typing import Any
 
 
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
-STATE_KEY = "claude-fable"
+STATE_KEY = "advisor"
+LEGACY_STATE_KEYS = ("claude-fable",)
 
 
 def state_path() -> Path:
@@ -63,7 +64,7 @@ def write_artifact(
     (artifact_dir / "stdout.txt").write_text(stdout)
     (artifact_dir / "stderr.txt").write_text(stderr)
     payload = {
-        "worker": STATE_KEY,
+        "agent": STATE_KEY,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "cwd": os.getcwd(),
         "command": cmd,
@@ -87,7 +88,7 @@ def save_last_session(
         return
     path = state_path()
     state = load_state()
-    worker = state.setdefault(STATE_KEY, {})
+    agent = state.setdefault(STATE_KEY, {})
     entry = {
         "session_id": session_id,
         "cwd": os.getcwd(),
@@ -100,25 +101,27 @@ def save_last_session(
     if output_path:
         entry["output_path"] = str(output_path)
         entry["artifact_dir"] = str(output_path.parent)
-    worker["last"] = entry
-    worker.setdefault("by_cwd", {})[os.getcwd()] = entry
+    agent["last"] = entry
+    agent.setdefault("by_cwd", {})[os.getcwd()] = entry
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
 
 
 def last_session(cwd_first: bool = True) -> dict[str, Any] | None:
-    worker = load_state().get(STATE_KEY)
-    if not isinstance(worker, dict):
-        return None
-    if cwd_first:
-        by_cwd = worker.get("by_cwd")
-        if isinstance(by_cwd, dict):
-            entry = by_cwd.get(os.getcwd())
-            if isinstance(entry, dict) and entry.get("session_id"):
-                return entry
-    entry = worker.get("last")
-    if isinstance(entry, dict) and entry.get("session_id"):
-        return entry
+    state = load_state()
+    for key in (STATE_KEY, *LEGACY_STATE_KEYS):
+        agent = state.get(key)
+        if not isinstance(agent, dict):
+            continue
+        if cwd_first:
+            by_cwd = agent.get("by_cwd")
+            if isinstance(by_cwd, dict):
+                entry = by_cwd.get(os.getcwd())
+                if isinstance(entry, dict) and entry.get("session_id"):
+                    return {"state_key": key, **entry}
+        entry = agent.get("last")
+        if isinstance(entry, dict) and entry.get("session_id"):
+            return {"state_key": key, **entry}
     return None
 
 
@@ -327,7 +330,7 @@ def add_common_run_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--resume-last",
         action="store_true",
-        help="Resume the last wrapper-saved Fable session.",
+        help="Resume the last wrapper-saved advisor session.",
     )
     parser.add_argument(
         "--global-last",
@@ -378,7 +381,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    run_parser = subparsers.add_parser("run", help="Run a Fable print-mode prompt.")
+    run_parser = subparsers.add_parser("run", help="Run an advisor print-mode prompt.")
     add_common_run_args(run_parser)
 
     agents_parser = subparsers.add_parser("agents", help="List Claude background agents.")
@@ -388,7 +391,7 @@ def parse_args() -> argparse.Namespace:
     agents_parser.add_argument("--raw", action="store_true", help="Print raw Claude output.")
     agents_parser.add_argument("--dry-run", action="store_true", help="Print command without running.")
 
-    last_parser = subparsers.add_parser("last", help="Print the last saved Fable session.")
+    last_parser = subparsers.add_parser("last", help="Print the last saved advisor session.")
     last_parser.add_argument("--claude-bin", default="claude", help=argparse.SUPPRESS)
 
     return parser.parse_args()

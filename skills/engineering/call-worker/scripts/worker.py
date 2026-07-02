@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Codex CLI with GPT-5.5 high-effort defaults."""
+"""Run the Codex GPT-5.5 worker with high-effort defaults."""
 
 from __future__ import annotations
 
@@ -17,7 +17,8 @@ from typing import Any
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 SANDBOXES = ("read-only", "workspace-write", "danger-full-access")
 APPROVAL_POLICIES = ("untrusted", "on-request", "never")
-STATE_KEY = "codex-gpt55"
+STATE_KEY = "worker"
+LEGACY_STATE_KEYS = ("codex-gpt55",)
 
 
 def state_path() -> Path:
@@ -67,7 +68,7 @@ def write_artifact(
     (artifact_dir / "stdout.jsonl").write_text(stdout)
     (artifact_dir / "stderr.txt").write_text(stderr)
     payload = {
-        "worker": STATE_KEY,
+        "agent": STATE_KEY,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "cwd": os.getcwd(),
         "command": cmd,
@@ -92,7 +93,7 @@ def save_last_thread(
         return
     path = state_path()
     state = load_state()
-    worker = state.setdefault(STATE_KEY, {})
+    agent = state.setdefault(STATE_KEY, {})
     entry = {
         "thread_id": thread_id,
         "cwd": os.getcwd(),
@@ -103,25 +104,27 @@ def save_last_thread(
     if output_path:
         entry["output_path"] = str(output_path)
         entry["artifact_dir"] = str(output_path.parent)
-    worker["last"] = entry
-    worker.setdefault("by_cwd", {})[os.getcwd()] = entry
+    agent["last"] = entry
+    agent.setdefault("by_cwd", {})[os.getcwd()] = entry
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n")
 
 
 def last_thread(cwd_first: bool = True) -> dict[str, Any] | None:
-    worker = load_state().get(STATE_KEY)
-    if not isinstance(worker, dict):
-        return None
-    if cwd_first:
-        by_cwd = worker.get("by_cwd")
-        if isinstance(by_cwd, dict):
-            entry = by_cwd.get(os.getcwd())
-            if isinstance(entry, dict) and entry.get("thread_id"):
-                return entry
-    entry = worker.get("last")
-    if isinstance(entry, dict) and entry.get("thread_id"):
-        return entry
+    state = load_state()
+    for key in (STATE_KEY, *LEGACY_STATE_KEYS):
+        agent = state.get(key)
+        if not isinstance(agent, dict):
+            continue
+        if cwd_first:
+            by_cwd = agent.get("by_cwd")
+            if isinstance(by_cwd, dict):
+                entry = by_cwd.get(os.getcwd())
+                if isinstance(entry, dict) and entry.get("thread_id"):
+                    return {"state_key": key, **entry}
+        entry = agent.get("last")
+        if isinstance(entry, dict) and entry.get("thread_id"):
+            return {"state_key": key, **entry}
     return None
 
 
@@ -444,7 +447,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    run_parser = subparsers.add_parser("run", help="Run codex exec with GPT-5.5 defaults.")
+    run_parser = subparsers.add_parser("run", help="Run the worker with GPT-5.5 defaults.")
     run_parser.add_argument("prompt", nargs="?", help="Prompt text. Reads stdin when omitted.")
     add_exec_args(run_parser)
     run_parser.add_argument("--sandbox", default="read-only", choices=SANDBOXES)
@@ -452,7 +455,7 @@ def parse_args() -> argparse.Namespace:
     run_parser.add_argument("--add-dir", action="append", default=[], help="Additional writable dir.")
     run_parser.add_argument("--ignore-rules", action="store_true", help="Ignore execpolicy rules.")
 
-    resume_parser = subparsers.add_parser("resume", help="Resume codex exec by thread id.")
+    resume_parser = subparsers.add_parser("resume", help="Resume a worker thread by id.")
     resume_parser.add_argument("thread_id", nargs="?", help="Thread/session id to resume.")
     resume_parser.add_argument("prompt", nargs="?", help="Prompt text. Reads stdin when omitted.")
     add_exec_args(resume_parser)
@@ -460,7 +463,7 @@ def parse_args() -> argparse.Namespace:
     resume_parser.add_argument(
         "--saved-last",
         action="store_true",
-        help="Resume the last wrapper-saved Codex thread.",
+        help="Resume the last wrapper-saved worker thread.",
     )
     resume_parser.add_argument(
         "--global-last",
@@ -484,7 +487,7 @@ def parse_args() -> argparse.Namespace:
     doctor_parser.add_argument("--json", action="store_true", help="Request JSON doctor output.")
     doctor_parser.add_argument("--dry-run", action="store_true")
 
-    last_parser = subparsers.add_parser("last", help="Print the last saved Codex thread.")
+    last_parser = subparsers.add_parser("last", help="Print the last saved worker thread.")
     last_parser.add_argument("--codex-bin", default="codex", help=argparse.SUPPRESS)
 
     return parser.parse_args()

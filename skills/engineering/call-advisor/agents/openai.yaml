@@ -1,0 +1,4 @@
+interface:
+  display_name: "Call Advisor"
+  short_description: "Premium advisor for hard judgment"
+  default_prompt: "Use $call-advisor to ask the Fable advisor for hard judgment or design critique."
