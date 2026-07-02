@@ -45,6 +45,8 @@ git pull
 ## What's inside
 
 ### Engineering
+- **call-claude-fable** — Calls Claude Code Fable as a premium CLI advisor for hard judgment, architecture, and frontend/design critique, with resumable sessions and saved output artifacts
+- **call-codex-gpt55** — Calls Codex CLI GPT-5.5 as a fast CLI worker for clean code implementation, repo exploration, tests, and bounded engineering tasks
 - **code-review** — Multi-lens code review with 3 parallel sub-agents (correctness, security, design) that validates and reports only high-signal findings
 - **devs-roundtable** — 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then build consensus
 - **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up

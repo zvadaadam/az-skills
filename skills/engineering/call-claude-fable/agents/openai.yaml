@@ -1,0 +1,4 @@
+interface:
+  display_name: "Call Claude Fable"
+  short_description: "Premium advisor for hard judgment"
+  default_prompt: "Use $call-claude-fable to ask Fable for hard judgment or design critique, then summarize the advice."
