@@ -4,6 +4,8 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 TARGETS=("$HOME/.claude/skills" "$HOME/.agents/skills" "$HOME/.codex/skills")
 
+python3 "$REPO/scripts/remove_legacy_feedback.py"
+
 # ── Colors & animation (disabled when piped) ────────
 if [ -t 1 ]; then
   bold=$'\033[1m'  dim=$'\033[2m'  reset=$'\033[0m'
