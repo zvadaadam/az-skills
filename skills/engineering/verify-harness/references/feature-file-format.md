@@ -42,10 +42,10 @@ Preconditions:
 - **Sub-features.** Stable, short ids (`move`, `snap`, `one-step`), each one sentence a person could check. Tests reference them (`@verifies feature#id`), and recipe steps name them, so renaming one is a map change.
 - **How to get to it.** List every entry point, including keyboard shortcuts, context menus, the agent CLI and API, and embedded or desktop hosts. A proof through one convenient entry point is incomplete when the file lists others.
 - **Recipe.**
-  - The preconditions start with `up` (and a fixture) and a doctor line.
+  - State the proof layer, entry point and external stand-ins. The preconditions include `doctor` and a fixture; persistent recipes use `up`, while one-shot commands create fresh state themselves.
   - Each bullet is bold words saying what it proves, then its sub-features in parentheses, then commands in backticks.
-  - `replay` runs every command in the file, in order, in one fresh session. Each bullet continues from the state the one before it left, so order them deliberately.
-  - Every observable result is an `expect`, or a `--contains`/`--lacks`/`--expect-error` on an API answer. A command that only acts proves nothing.
+  - `replay` runs the recipe commands in order. A persistent recipe uses one fresh session, with each bullet continuing from the previous state. Bounded commands may own independent fresh state; make that choice explicit.
+  - Every observable result is an `expect`, an explicit assertion flag, or a named recipe assertion returning expected/actual values. A command that only acts proves nothing.
   - Arrange through the product (fixtures, the app's CLI or API), never by editing the page. The behaviour under test comes from a person's or agent's input.
   - Include refusal steps, with the refusal's words checked, and at least one persistence check (reload, or the saved file).
   - End the file with `expect console-clean`, or its equivalent for the surface.

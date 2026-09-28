@@ -2,9 +2,11 @@
 
 What a driver needs so that agents use it instead of writing their own scripts. Build it by extracting the repository's existing test helpers, then grow it through the gaps loop.
 
+Keep implementation in the repository's existing CLI or development tooling (for example `apps/cli`), with executable fixtures in its test directories. The agent skill holds navigation and recipes and links to the driver; it need not contain application code. Use existing browser/device controls instead of building another automation engine.
+
 ## Shape
 
-- **A CLI client and a session daemon.** `up` starts a detached process that holds the app, a browser (or PTY) and any clients. Every other command is one short request to that process, and every answer is JSON. An agent can then call it one line at a time, from any host.
+- **A CLI, with a daemon only for persistent sessions.** Start with bounded commands that create isolated state, exercise the real entry point, retain evidence and clean up. If recipes need an open browser, PTY or runtime across commands, add a session daemon: `up` starts it, subsequent commands send short requests, and `down` stops it. Answers are JSON in either form. Do not implement controls unused by a selected recipe.
 - **One table of commands** (name, where it runs, usage, one-line summary). `--help`, `replay` and the map's CI check all read it, so a recipe can never name a command that does not exist.
 - **Sessions.** The default session name comes from the agent host's conversation id (for example `CLAUDE_CODE_SESSION_ID` or `CODEX_SESSION_ID`), so two agents in one checkout never share or stop each other's session. `--session <name>` picks another. A session records its owner, and `down` refuses another's without `--force`.
 - **An idle stop.** A session left behind stops itself after a while, killing only the processes it started, never anything by name.
@@ -21,7 +23,7 @@ What a driver needs so that agents use it instead of writing their own scripts. 
 
 A read-only health check, run first and after anything surprising:
 
-- **Build freshness.** The bundle is newer than every source file it is built from. `up` refuses a stale bundle; `--allow-stale` lets a driver check through but marks its proof "not product proof".
+- **Build freshness.** A compiled bundle must identify the source it contains; refuse a stale bundle. `--allow-stale` is for driver checks, marked "not product proof". Direct source execution records a digest of the relevant source and fixtures instead; it needs no synthetic build step.
 - The session's processes are alive, and its home is isolated.
 - Page errors so far.
 - Whether the tracker's owner key is available, without ever printing it.
@@ -94,7 +96,8 @@ Each fault turns off with `off`, and `down` undoes it.
 ## Evidence and proof
 
 - `shot`, `record start|stop` (video), and `trace start|stop` (a DOM trace).
-- `proof <feature> --note "…"` copies the evidence, the command log, errors, captured submissions and the build stamp to `.context/proof/<feature>/<time>/`. The folder survives `down`.
+- `proof <feature> --note "…"` copies the evidence, command log, errors, captured submissions and source/build stamp to `.context/proof/<feature>/<time>/`. One-shot commands may save this bundle automatically. It survives cleanup, including failed runs.
+- Label the exercised layer and real entry point, plus stand-ins and unverified paths. Record expected and actual values for assertions. A passing supported recipe must not imply that an unmapped UI or live-provider path passed.
 
 ## The map commands
 

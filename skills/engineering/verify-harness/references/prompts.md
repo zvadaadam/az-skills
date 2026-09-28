@@ -14,17 +14,17 @@ Paste these, or adapt them into the repository's notes. `<app>` is the product's
 >    - every per-person state folder, offline or preview switch, and outbound service a verification must not really call;
 >    - every way the app can leave the session (the system opener, downloads, dialogs, the clipboard, third-party calls), and every host it runs inside (an iframe, a chat app, an extension);
 >    - every registry of entry points (UI tool catalogues, CLI usage, API routes, MCP tools).
-> 2. Build `control-<app>` by extracting the existing harness, following the driver contract. It needs:
+> 2. Build the smallest useful `control-<app>` by extracting existing controls, following the driver contract. Select only capabilities needed by the first real recipe; this list is a growth path, not a first-PR checklist:
 >    - `up` and `down` for isolated, per-agent sessions, and `doctor` with build freshness;
 >    - actions by role and name with real modifier keys;
 >    - a pass-through to the app's own CLI or API, with names instead of ids;
 >    - `expect` for every kind of observable result;
 >    - recording stand-ins at every boundary found in step 1, faults for failure paths, and `proof`;
 >    - `script` with a gaps ledger, `report` and `issues` against the tracker, and `replay` and `sweep`.
-> 3. Seed the feature map with the three to six areas that change or break most. Use the four-section format with the header line (Rules · Words people use · Checks). Write each recipe as one continuous session in which every result is an `expect`.
+> 3. Seed the feature map with the selected area(s), growing toward three to six as needed. Use the four-section format with the header line (Rules · Words people use · Checks). State each recipe's proof layer and use explicit assertions. One-shot commands may own their session and cleanup.
 > 4. Add the map's CI checks, including completeness against every registry (report only for now), and `@verifies` annotations on the existing tests.
-> 5. Put the skill in `.agents/skills/verify-<app>/`, link it from `.claude/skills/` and `.cursor/skills/`, and add one paragraph to AGENTS.md.
-> 6. Replay every file until it passes, and check the proof survives `down`.
+> 5. Use one canonical skill folder and link it from the hosts the repository uses. Add one paragraph to AGENTS.md.
+> 6. Replay every supported recipe and check proof survives cleanup. Name unavailable entry points and the layer actually proven; do not present component checks as application or live-provider qualification.
 >
 > Keep a LEARNINGS.md of what surprised you and the rule each surprise taught.
 
@@ -32,11 +32,11 @@ Paste these, or adapt them into the repository's notes. `<app>` is the product's
 
 > Verify this change with verify-<app>.
 >
-> 1. `control-<app> doctor` (run `build` if it says stale), then `control-<app> issues <feature>` for what reporters already said.
+> 1. `control-<app> doctor` (run `build` if it says stale), then `control-<app> issues <feature>` when a tracker is configured.
 > 2. Read `features/<feature>.md`, and run what `control-<app> checks <feature>` lists, fastest first.
-> 3. `control-<app> up --fixture …`. Drive every entry point the file lists, plus the success, cancel, empty, error and persistence paths the change touches. State each result as an `expect`, and confirm it through the product's own read.
-> 4. Finish with `control-<app> proof <feature> --note "…"` and cite the folder.
-> 5. If the driver can't do something, use `control-<app> script … --why …`, then promote it into the driver or `report` it before you finish.
+> 3. Start a session with `control-<app> up --fixture …` when needed, or run the bounded recipes. Drive supported entry points and relevant success, cancel, empty, error and persistence paths. State each result as an expectation and confirm side effects through the product's own read. Keep unavailable paths explicit.
+> 4. Retain the automatic proof or run `control-<app> proof <feature> --note "…"`, and cite the folder.
+> 5. If the driver can't do something, preserve the custom step and its purpose in the gaps ledger (using `script` when supported). Promote useful recurring steps; leave other gaps explicit, with evidence and the prerequisite to close them.
 > 6. If behaviour changed, update the feature file and its recipe in this PR, and `replay` it.
 
 ## 3. Reproduce a report (the outer loop)

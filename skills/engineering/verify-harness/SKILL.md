@@ -27,7 +27,19 @@ A verification harness fixes that with two things that live in the repository:
 1. **`control-<app>`**, a driver CLI. It starts the real app in an isolated, throwaway session and acts on it the way a person does: roles and names, real modifier keys, drags, menus, files, keyboard. It also acts the way an agent does, through the app's own CLI, API or MCP. Every observable result is stated as an `expect`, and the evidence is kept as a proof.
 2. **A feature map**, one file per user-facing area, written from the user's point of view. Each file says what the area does, every way to reach it, a recipe of `control-<app>` commands that proves it, and the gotchas that mislead. A recipe replays on its own, so the map is also the regression checklist.
 
-The skill the agent reads is `verify-<app>` (SKILL.md, the driver, fixtures, `features/`). This skill builds it, grows it, uses it and keeps it true.
+Here, “harness” means the tools that run and check the application. The guide the agent reads is `verify-<app>` (SKILL.md and `features/`). Put the driver in the repository's normal CLI or development tooling, covered by its build, types, lint and CI; keep executable test helpers with the repository's tests. The skill links to those commands rather than owning a parallel application. This skill builds that workflow, grows it, uses it and keeps it true.
+
+For the broader repository setup—development commands, architecture and automated constraints, agent guidance, task skills and maintenance—use `setup-agent-workflow` when available. This skill owns the verification portion.
+
+## Keep the proof and the investment proportional
+
+The feature map is navigation and executable product knowledge, not a list of test files. Start from a report's words, find the user's entry point and expected behaviour, drive it, inspect the result, then preserve that route for the next agent. Existing tests are fast supporting checks; a green test suite alone does not prove the user's journey.
+
+Start with one useful vertical slice and reuse the app's existing CLI, API, browser or device controls. Add a persistent daemon only when the selected recipes need a session across commands. The driver contract is a capability catalogue, not a requirement to implement every command before the first proof. Add gestures, faults, tracker integration and other controls when a real recipe needs them. Keep unsupported controls and entry points in a visible gaps list.
+
+Every proof names its layer: **test**, **component/integration**, **local application**, or **live provider**. Record the entry point, fixture/stand-ins, source/build identity, action, expected and observed results, evidence, and unverified paths. A detector and archive check can prove a build handoff, but cannot claim the app compiled or launched. A local app with fake external services does not qualify those services. Refuse a requested proof when its required path is unavailable; do not silently substitute a lower layer.
+
+When a failure recurs, prefer removing the invalid state through the product's types or architecture, then an enforceable test/lint rule, then guidance in the feature map. Preserve useful tests; do not generate tests that merely restate the implementation or grow a parallel model of the product inside the driver.
 
 ## Modes
 
@@ -35,7 +47,7 @@ Pick the one the request needs, and say which:
 
 | Mode | When | Outcome |
 |---|---|---|
-| **Set up** | the repo has no verify skill, or agents write probe scripts | `verify-<app>` with a working driver, 3–6 mapped areas, CI checks, one proven replay |
+| **Set up** | the repo has no verify skill, or agents write probe scripts | `verify-<app>` with the smallest useful driver, focused feature map, CI checks and one proven replay; widen toward 3–6 areas as needed |
 | **Expand** | "map everything", a new area, the completeness check fails | new feature files, each replayed green, driver gaps promoted |
 | **Verify** | a change needs proof before merge | a proof folder cited in the PR, map updated in the same PR |
 | **Reproduce** | a bug report or tracker issue | reproduced twice with proof (or "does not reproduce on <commit>"), then a failing test, fix and replay |
@@ -64,8 +76,8 @@ If the checkout does not build or start, fix that first or report it precisely. 
 Follow [`references/driver-contract.md`](references/driver-contract.md). In short:
 
 - **Name it apart from the product's own commands**, so `verify` or `test` never collide.
-- **Sessions.** `up` starts an isolated session: a temporary workspace and home, the app started through its own start command, preview or offline modes on, outbound services captured instead of called. `down` stops only what this session started. The default session is per agent conversation, so two agents in one checkout never stop each other.
-- **Doctor.** Answers "is this worth driving?": a build newer than every source file (a proof against a stale bundle shows old behaviour, so `up` refuses one), processes alive, isolation holding, open gaps.
+- **Sessions.** A bounded one-shot command may create and clean up its own isolated session. For persistent workflows, `up` starts a temporary workspace/profile and the app through its own start command; `down` stops only what this session started. Default sessions are per conversation so agents cannot stop each other. Preview/offline modes and captured outbound calls prevent accidental live operations.
+- **Doctor.** Answers "is this worth driving?": build/source identity, processes alive when required, isolation holding, open gaps. Refuse stale compiled bundles. For direct source execution, record a source digest instead of inventing a build-freshness check.
 - **Two reads for every result:** once as a person sees it (the accessibility tree, the visible state) and once as the product saved it (its own CLI or API). A result is an `expect` that retries until it holds, and answers `expected` and `actual` when it does not.
 - **Stand-ins at every boundary** from the interview. Each one records what the app asked for, and the product's own checks still run: the opener, downloads, dialogs, the clipboard, outbound services, pages to fetch, the host an embedded app runs in.
 - **Faults** for failure paths (a read-only folder, failing fonts, slow or failing reads), reversible and undone by `down`.
@@ -75,7 +87,7 @@ Follow [`references/driver-contract.md`](references/driver-contract.md). In shor
 
 ### 3. Seed the feature map
 
-Write `features/README.md` and one file per area for the 3–6 areas that change or break most. Use the four-section format in [`references/feature-file-format.md`](references/feature-file-format.md):
+Write `features/README.md` and one file per selected area, starting with the change or report at hand. Use the four-section format in [`references/feature-file-format.md`](references/feature-file-format.md):
 
 - a paragraph saying what the area does;
 - a header line: `Rules: …` (where the rule lives), `Words people use: …` (the words reporters use, which are rarely the code's), and `Checks: control-<app> checks <feature>`;
@@ -86,14 +98,14 @@ Write `features/README.md` and one file per area for the 3–6 areas that change
 
 ### 4. Wire it into the repository
 
-- Put the skill in one real folder and link it for each host: `.agents/skills/verify-<app>/` (Codex), linked from `.claude/skills/` (Claude Code) and `.cursor/skills/` (Cursor).
+- Put the skill in one real folder, using the repository's existing convention or `.agents/skills/verify-<app>/`. Link it from the hosts the repository actually uses, such as `.claude/skills/` (Claude Code) or `.cursor/skills/` (Cursor).
 - Add one paragraph to AGENTS.md: prove behaviour with `verify-<app>`, never write standalone probe scripts, and update the feature file in the same PR.
 - Add annotations like `// @verifies <feature>#<sub>` above the existing tests that pin a sub-feature, so `checks` and `coverage` are generated, not hand-kept.
 - Add a CI test for the map ([`references/map-checks.md`](references/map-checks.md)). It checks each file's structure, that every recipe command exists in the driver, that every annotation resolves, that the index lists every file, and that fixtures exist. It also checks that every entry point in every registry appears in a feature file: report while mapping, assert once complete.
 
 ### 5. Prove it before handing it over
 
-Replay every seeded file in a fresh session until each passes, and check the proof survives `down`. A harness that was never run end to end is a draft.
+Replay every seeded recipe in fresh state and check the proof survives cleanup. State the layer each replay reached. A component-only first slice is useful when labelled as such, but its unproven application paths remain gaps; a claimed application harness that was never run end to end is a draft.
 
 ## Expand the map
 
@@ -108,10 +120,10 @@ Prompt 7 in [`references/prompts.md`](references/prompts.md) is the brief. Map t
 
 ## Verify a change
 
-1. `control-<app> doctor` (build if stale), then `issues <feature>`: a fix awaiting review is something to confirm, and an open issue may be exactly what you are about to see.
+1. `control-<app> doctor` (build if stale), then `issues <feature>` when a tracker is configured: a fix awaiting review is something to confirm, and an open issue may be exactly what you are about to see.
 2. Read the feature file, and run what `checks <feature>` lists, fastest first.
-3. `up`, then drive every entry point the file lists, plus the success, cancel, empty, error and persistence paths the change touches. Confirm each side effect through the second read.
-4. `proof <feature> --note "…"`, and cite the folder.
+3. Start the session if needed, or run the bounded recipes. Drive every supported entry point the change touches, including relevant success, cancel, empty, error and persistence paths. Confirm each side effect through the second read; report unsupported paths explicitly.
+4. Retain the automatically saved proof or run `proof <feature> --note "…"`, and cite the folder.
 5. Changed behaviour means the feature file and its recipe change in the same PR, and `replay` passes.
 
 The proof bar:
@@ -124,9 +136,9 @@ The proof bar:
 
 ## Reproduce a report
 
-1. `route "<the report's words>"`, then `issues <feature>`.
+1. `route "<the report's words>"`, then `issues <feature>` when a tracker is configured.
 2. Reproduce the exact symptom twice through the real path, and keep a proof.
-3. Note the outcome on the issue. "Does not reproduce on <commit>" is a finding too.
+3. Record the outcome with the proof; update the issue when the requested workflow includes it. "Does not reproduce on <commit>" is a finding too.
 4. If it reproduces: write a failing test annotated for its sub-feature, fix the root cause, replay the feature, and open the PR linked to the issue.
 
 ## Maintain
@@ -143,15 +155,15 @@ The map rots when the app changes, so re-check it:
 5. Check `coverage` for sub-features with no test, the gaps ledger for recurring gaps, and the completeness test for new unmapped entry points.
 6. End with exactly one outcome: `clean`, `changed` (one PR of proven corrections) or `blocked` (say what blocked it).
 
-Maintenance edits only the verify skill's own folder, never product code.
+Maintenance may update the guide, map, driver and verification-only fixtures wherever they live. Report product regressions; changing product behavior belongs to the authorized product task.
 
 ## No silent scripts
 
-Every custom step an agent writes goes through `control-<app> script`, which logs it in the gaps ledger. Before the task ends, the gap is promoted into the driver as a command, flag, fixture or `expect`, and its recipe uses it. Otherwise it is reported to the tracker under a verifier category (for example `x-verify`). `down` lists open gaps. A script used once and deleted teaches the next agent to write another; a promoted command teaches every agent after it.
+Preserve custom verification steps with their purpose and result. A persistent driver can provide `control-<app> script` to log them in its gaps ledger; a small driver can use a local gaps file. Promote useful recurring steps into a command, flag, fixture or expectation and update the recipe. Otherwise leave the gap explicit, with retained evidence and what would close it. Report it to the tracker when that integration and workflow are authorized. A script used once and deleted teaches the next agent to write another; a promoted command teaches every agent after it.
 
 ## The tracker
 
-Wire the harness to the team's issue tracker (HiveNet, GitHub, Linear):
+When issue-driven verification needs it, wire the harness to the team's existing tracker (HiveNet, GitHub, Linear). Local setup and proof do not require a tracker integration:
 
 - `issues <feature>` finds what reporters already said, matching at least two of the feature's words, and `issues --query "<words>"` finds duplicates before you report.
 - Report driver and map problems under the verifier category, and product regressions under the product's ordinary categories, naming the feature.

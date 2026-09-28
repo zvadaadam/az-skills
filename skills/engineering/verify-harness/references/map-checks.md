@@ -38,14 +38,15 @@ test("a drag with the rectangle tool inside an artboard makes a child", () => { 
 test("every feature file has its paragraph, words, four sections and recipes that use real driver commands", () => {
   const problems = loadMap().flatMap((feature) => problemsOf(feature, COMMAND_NAMES));
   assert.deepEqual(problems, []);
-  for (const feature of loadMap()) assert.ok(feature.preconditions.some((step) => step.commands.some((command) => command[0] === "up")));
+  // Require up only for persistent recipes; one-shot commands own fresh state and cleanup.
+  for (const feature of loadMap()) assert.ok(feature.preconditions.length > 0);
 });
 
 test("every @verifies annotation names a mapped feature and sub-feature", () => { /* resolve each; none dangling; each sits above a test( */ });
 
 test("the index lists every feature file, and every listed file exists", () => { /* README links === folder */ });
 
-test("the skill is found by every host: one folder, linked from each host's skills folder", () => { /* realpath checks, frontmatter name */ });
+test("the skill is found by each configured host: one authoritative folder", () => { /* realpath checks, frontmatter name */ });
 
 test("fixtures the recipes start from exist", () => { /* every `up --fixture X` has fixtures/X.json */ });
 
