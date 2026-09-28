@@ -124,6 +124,7 @@ The [`az-skills-feedback` skill](skills/engineering/az-skills-feedback/SKILL.md)
 - **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up
 - **complexity-check** — Audits a change for unnecessary additions, assumptions, spread, and duplication
 - **deslop** — Detects and removes AI-generated code slop (unnecessary abstractions, over-engineering, verbose patterns)
+- **implementation-rehearsal** — Walks through a proposed implementation without changing code, challenges likely regressions, and revises the plan before building
 - **pre-factor** — Auto-fires before a feature or non-trivial change: maps the code the change will land in and surfaces the prep refactors that make the change easy (reshape the seam, add a safety net, kill duplication) — each one traced to the upcoming change, landed as its own commit first. The before-bookend to `complexity-check`
 - **repo-history-book** — Builds an evidence-backed account of how a project evolved from its commits, PRs, releases, and docs
 - **tour** — Explores a codebase subsystem and produces a self-contained HTML tour
