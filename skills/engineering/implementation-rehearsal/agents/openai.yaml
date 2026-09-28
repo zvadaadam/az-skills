@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementation Rehearsal"
+  short_description: "Rehearse a change and revise it before writing code"
+  default_prompt: "Use $implementation-rehearsal to walk through this proposed change without implementing it, challenge the likely regressions, and recommend the smallest sound plan."
