@@ -127,7 +127,9 @@ The [`az-skills-feedback` skill](skills/engineering/az-skills-feedback/SKILL.md)
 - **implementation-rehearsal** — Walks through a proposed implementation without changing code, challenges likely regressions, and revises the plan before building
 - **pre-factor** — Auto-fires before a feature or non-trivial change: maps the code the change will land in and surfaces the prep refactors that make the change easy (reshape the seam, add a safety net, kill duplication) — each one traced to the upcoming change, landed as its own commit first. The before-bookend to `complexity-check`
 - **repo-history-book** — Builds an evidence-backed account of how a project evolved from its commits, PRs, releases, and docs
+- **setup-agent-workflow** — Sets up a repository for effective AI agent work: learn the product, repair the development loop, encode recurring mistakes in code and checks, connect concise AGENTS.md guidance to task skills and feature knowledge, then demonstrate and maintain a complete change-and-verification loop. Reuses existing tools and adds only what the repository needs
 - **tour** — Explores a codebase subsystem and produces a self-contained HTML tour
+- **verify-harness** — Gives a repo a verification harness its agents actually use: a `control-<app>` driver CLI that runs the real app in an isolated session and drives it the way a person and an agent do, plus a user-POV feature map (what exists, how to reach it, a replayable recipe of `expect`s, what misleads) checked in CI for completeness. Covers setup, expanding the map with parallel mappers, verifying a change with proof, reproducing reports, and maintenance — with a "no silent scripts" gaps loop that turns every one-off probe into a driver command. Based on Lauren Tan's (@poteto) verification skills in Cursor's pstack
 
 ### Design
 - **design-roundtable** — 5 legendary designers (Rams, Ive, Vignelli, Fukasawa, Jongerius) debate your brief in parallel, then build consensus

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Set Up Agent Workflow"
+  short_description: "Make a repository easier for AI agents to work in"
+  default_prompt: "Use $setup-agent-workflow to improve this repository for AI agents, implement the most useful missing pieces, and demonstrate one complete change-and-verification loop."
