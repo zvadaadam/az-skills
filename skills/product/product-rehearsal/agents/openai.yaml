@@ -1,0 +1,4 @@
+interface:
+  display_name: "Product Rehearsal"
+  short_description: "Rehearse a feature as if shipped and revise it before building"
+  default_prompt: "Use $product-rehearsal to imagine this feature has shipped, walk a real user or agent through using it, find where it will be bad, and recommend what to build."
