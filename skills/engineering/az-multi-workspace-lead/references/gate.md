@@ -1,0 +1,12 @@
+# Gate
+
+**Before the handoff.** When a workspace coordinator first freezes a change over 300 lines, start one read-only subagent from a model family the workspace's reviewers don't use. Have it review that revision alongside the workspace reviewer. For each construct the diff adds, ask it to search the base and report where the change introduces a second copy. Have it trace each stored key, file or setting against the base. Verify findings in the code and send them to the coordinator in that review round. This catches problems such as one fact stored in four places while the candidate is still under review.
+
+When a workspace coordinator says a change is ready:
+
+1. **Get one handoff:** the candidate revision and base, the frozen diff, what ran on which build, what's still pending, open findings, a Patterns line (what older code got better, what was found and left), and the decision needed. Proof counts only for the revision and build it ran on.
+   If the change affects a shared interface, replay the affected caller on the candidate built against its intended base. If that base is still pending, name the check that must pass before this change can land.
+2. **Read the diff against the base it will land on** while its checks run. If the first candidate already had the independent review, read what changed since that revision. Check for existing code that does the same job and whether the new pattern is one the next twenty agents should copy.
+3. **Decide in one message:** blocked on a named issue, or a go with its conditions named: the revision, the checks still owed, the PR owner, and what the user's grant covers. A conditional go saves a round trip: "Go on a new head that reads `RefusedError.code` instead of parsing the message; it carries once typecheck and the sync tests pass on that head."
+4. **After the go,** the PR owner opens the PR, watches CI and review (`az-greenlight-pr` if installed), and merges under the grant. A fix for a CI or review finding keeps the go if a check that failed before the fix passes after it and the full gate ran on the new head. The coordinator sends you the delta with its merge report. Anything more comes back to you before merge.
+5. **After the merge,** get the merge SHA so the next coordinator can rebase. Each workspace coordinator updates its issue tracker and files its follow-ups. If the user's goal is working software, track merged, released and verified live separately, and close the item only when the original failing journey works on the released build.

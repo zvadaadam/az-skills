@@ -1,4 +1,4 @@
 interface:
   display_name: "AZ · Workspace Coordinator"
-  short_description: "Lead builder, reviewer and checker sessions for one change"
-  default_prompt: "Use $az-workspace-coordinator to lead this change with builder, reviewer and checker sessions and hand over one reviewed candidate."
+  short_description: "Coordinate sessions for one change in one Conductor workspace"
+  default_prompt: "Use $az-workspace-coordinator to coordinate this change in my workspace and report back to me with the verified result."

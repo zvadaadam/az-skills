@@ -1,4 +1,0 @@
-interface:
-  display_name: "AZ · Master Coordinator"
-  short_description: "Coordinate several Conductor workspaces and their landing order"
-  default_prompt: "Use $az-master-coordinator to coordinate the workspaces in flight, keep the board, and decide what lands in which order."

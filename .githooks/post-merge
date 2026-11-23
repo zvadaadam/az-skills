@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Runs after git pull — auto-installs any new skills
-"$(git rev-parse --show-toplevel)/scripts/install.sh"
