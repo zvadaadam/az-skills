@@ -47,6 +47,21 @@ trap cleanup EXIT
 printf "%s" "$hide_cursor"
 
 for dir in "${TARGETS[@]}"; do mkdir -p "$dir"; done
+
+# ── Prune links to skills this checkout renamed or removed ──
+prune_stale_links() {
+  local dir link
+  for dir in "${TARGETS[@]}"; do
+    [ -d "$dir" ] || continue
+    for link in "$dir"/*; do
+      [ -L "$link" ] || continue
+      case "$(readlink "$link")" in
+        "$REPO"/skills/*) [ -e "$link" ] || { rm "$link"; n_pruned=$((n_pruned + 1)); } ;;
+      esac
+    done
+  done
+}
+
 git -C "$REPO" config core.hooksPath .githooks 2>/dev/null || true
 
 # ── Logo ────────────────────────────────────────────
@@ -72,6 +87,9 @@ n_linked=0
 n_unchanged=0
 n_replaced=0
 n_backed=0
+n_pruned=0
+
+prune_stale_links
 
 # ── Install ─────────────────────────────────────────
 prev_cat=""
@@ -168,6 +186,9 @@ if [ "$n_unchanged" -gt 0 ]; then
 fi
 if [ "$n_backed" -gt 0 ]; then
   parts+=("${yellow}${n_backed} backed up${reset}")
+fi
+if [ "$n_pruned" -gt 0 ]; then
+  parts+=("${dim}${n_pruned} stale links removed${reset}")
 fi
 
 summary=""
