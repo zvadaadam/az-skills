@@ -12,8 +12,10 @@ Drive a PR to green — fix CI, address AI code reviews, iterate until merge-rea
 
 ## Tool
 
+Run the helper from the PR checkout. Set `SKILL_DIR` to the absolute path of the folder containing this `SKILL.md`. The helper uses the current branch when you omit the PR number.
+
 ```bash
-python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py [PR]
+python3 "$SKILL_DIR/scripts/gl-snapshot.py"
 ```
 
 Returns structured JSON: CI status, review comments (with code context), and recommended `actions`. State persists in `/tmp/gl-{repo}-pr{N}.json`.
@@ -120,7 +122,7 @@ Concrete commands for the most common flow: bot posts comments → triage → fi
 
 ```bash
 # 1. Snapshot
-python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py 42
+python3 "$SKILL_DIR/scripts/gl-snapshot.py" 42
 # → actions: ["triage_comments"], new_comments: [{id: "123", body: "...", code_context: "..."}]
 
 # 2. Triage (see references/triage-process.md)
@@ -139,12 +141,12 @@ gh pr comment 42 --body "## Greenlight — Round 1
 **Disagreed (1):** Z — reasoning"
 
 # 6. Mark as seen
-python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py --mark-seen 123,456,789
+python3 "$SKILL_DIR/scripts/gl-snapshot.py" --mark-seen 123,456,789
 
 # 7. Wait for bot re-review, then re-snapshot
 gh pr checks 42 --watch --fail-fast
-python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py --wait-review
-python3 ~/.claude/skills/greenlight-pr/scripts/gl-snapshot.py 42
+python3 "$SKILL_DIR/scripts/gl-snapshot.py" --wait-review
+python3 "$SKILL_DIR/scripts/gl-snapshot.py" 42
 # → new round: check actions again
 ```
 

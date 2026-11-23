@@ -10,96 +10,45 @@
   <a href="#whats-inside">Skills</a> &nbsp;&middot;&nbsp;
   <a href="#update">Update</a> &nbsp;&middot;&nbsp;
   <a href="#feedback">Feedback</a> &nbsp;&middot;&nbsp;
-  <a href="https://skills.sh/zvadaadam/az-skills">skills.sh</a>
+  <a href="https://skills.sh/zvadaadam/az-skills">Browse on skills.sh</a>
 </p>
 
 ---
 
-Each skill is a small package of instructions and code that gives an agent a new ability — like fixing failing CI pipelines, exploring problems from multiple angles, or cleaning up messy code. This repo is updated as I build and refine new skills.
-
 ## Install
 
-Use [Vercel's Skills CLI](https://github.com/vercel-labs/skills) to select skills and agents:
+From your project, run the skills.sh CLI with Node.js 22.20 or later.
 
 ```bash
 npx skills add zvadaadam/az-skills
 ```
 
-Install the whole collection globally for Claude Code and Codex:
-
-```bash
-npx skills add zvadaadam/az-skills --skill '*' --agent claude-code codex --global
-```
-
-Or list the available skills and install just one:
-
-```bash
-npx skills add zvadaadam/az-skills --list
-npx skills add zvadaadam/az-skills --skill deslop
-```
-
-Each skill includes a standalone Hivenet feedback command. The optional `az-skills-feedback` skill adds detailed reporting guidance; it is included when you install the whole collection.
-
-The Skills CLI installs from this public GitHub repository. The `skills/<category>/<name>/SKILL.md` layout is discovered automatically; no npm package or registry upload is needed. New installs use the default branch, so repository changes become available after they reach `master`. The [skills.sh listing](https://skills.sh/zvadaadam/az-skills) is driven by installations, as described in [Vercel's FAQ](https://skills.sh/docs/faq).
-
-The Skills CLI has its own install-count telemetry. To disable it, prefix commands with `DISABLE_TELEMETRY=1`; see the [CLI documentation](https://skills.sh/docs/cli). Hivenet commands in this repo disable automatic context collection separately.
-
-### Install from a local checkout
-
-For development, link skills directly to a clone so local edits are available immediately:
-
-```bash
-git clone https://github.com/zvadaadam/az-skills.git
-cd az-skills
-./scripts/install.sh
-```
-
-This links the skills into `~/.claude/skills`, `~/.agents/skills`, and `~/.codex/skills` and installs this repo's Git hooks for updates.
+Choose the skills and agents you use. Add `--skill deslop` to pick one by name or `--global` to install across projects.
 
 ## Update
-
-For Skills CLI installs:
 
 ```bash
 npx skills update
 ```
 
-For a linked local checkout, pull the latest:
-
-```bash
-cd az-skills
-git pull
-```
-
-### Moving from the old installer
-
-The local install and uninstall scripts remove the retired feedback hook, this checkout's old `skill-feedback` links, and the local installation ID. The Skills CLI copies individual skill directories and does not run this cleanup. Before switching from an earlier local install, run the cleanup from the updated checkout:
-
-```bash
-python3 scripts/remove_legacy_feedback.py
-```
-
-If you previously installed the retired `skill-feedback` package through the Skills CLI, remove it as well:
-
-```bash
-npx skills remove skill-feedback --global
-```
-
-Omit `--global` if that old package was installed in a project. Then install the current skills with `npx skills add` as above.
-
 ## Uninstall
 
-For Skills CLI installs, name the skill to remove:
+Remove a skill by name. Add `--global` if you installed it globally.
 
 ```bash
-npx skills remove deslop --global
+npx skills remove deslop
 ```
 
-Omit `--global` for project installs. For a linked local checkout:
+<details>
+<summary>Switching from the old installer</summary>
 
-```bash
-./scripts/uninstall.sh
-```
+1. In the original clone, if `git config --local --get core.hooksPath` prints `.githooks`, run `git config --local --unset-all core.hooksPath '^\.githooks$'`. This prevents a later checkout or pull from reinstalling the links.
+2. Run `./scripts/uninstall.sh` there if it still exists. In `~/.claude/skills`, `~/.agents/skills`, and `~/.codex/skills`, unlink any remaining symlinks that point into that clone. For each link you remove manually, restore the newest matching `<name>.backup.<timestamp>` directory to `<name>` if present.
+3. If you used the retired `skill-feedback` package, remove its `skill-feedback/scripts/skill-event.py` handler from `PostToolUse` in `~/.claude/settings.json` and delete `~/.az-skills/installation-id` if present. For a CLI-installed copy, also run `npx skills remove skill-feedback` in its original scope.
+
+Then run the install command above. Add `--global` to match the old installer's scope.
+
+</details>
 
 ## Feedback
 
@@ -110,6 +59,8 @@ DO_NOT_TRACK=1 npx --yes hivenet@latest --to az-skills --dsn https://hv_pub_9f0d
 ```
 
 The [`az-skills-feedback` skill](skills/engineering/az-skills-feedback/SKILL.md) covers structured failed-task reports for the team's eval corpus, attachments, and follow-up questions and replies. The bundled publishable DSN fixes the destination to az-skills; no user-provided key is needed. These examples disable automatic context collection. Keep reports specific and never include secrets or private data.
+
+To opt out of the Skills CLI's install counts, prefix its commands with `DISABLE_TELEMETRY=1`. [CLI telemetry settings](https://skills.sh/docs/cli)
 
 ---
 

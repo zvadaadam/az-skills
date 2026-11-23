@@ -220,7 +220,7 @@ gh pr comment <pr> --body '## Greenlight — Round N
 ### Mark as processed
 
 ```bash
-python3 gl-snapshot.py --mark-seen <comma-separated-ids>
+python3 "$SKILL_DIR/scripts/gl-snapshot.py" --mark-seen <comma-separated-ids>
 ```
 
 ## When to stop iterating
