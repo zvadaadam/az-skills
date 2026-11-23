@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> &nbsp;&middot;&nbsp;
   <a href="#whats-inside">Skills</a> &nbsp;&middot;&nbsp;
+  <a href="#install">Install</a> &nbsp;&middot;&nbsp;
   <a href="#update">Update</a> &nbsp;&middot;&nbsp;
   <a href="#feedback">Feedback</a> &nbsp;&middot;&nbsp;
   <a href="https://skills.sh/zvadaadam/az-skills">skills.sh</a>
@@ -15,11 +15,65 @@
 
 ---
 
-Each skill is a small package of instructions and code that gives an agent a new ability — like fixing failing CI pipelines, exploring problems from multiple angles, or cleaning up messy code. This repo is updated as I build and refine new skills.
+Each skill is a small package of instructions and code that gives an agent a new ability, like getting a PR green, rehearsing a change before writing it, or exploring a problem from several angles. They work in Claude Code and Codex. Every name starts with `az-`, so they sit together in a skill list and never collide with built-in commands or other collections.
+
+## What's inside
+
+### Engineering
+
+| Skill | What it does |
+|---|---|
+| `az-greenlight-pr` | Drives a PR to merge-ready: fixes CI, verifies and answers every review comment, and waits for re-review until it is green. |
+| `az-code-review` | Reviews a branch or PR with three parallel reviewers (correctness, security, design) and reports only verified findings. |
+| `az-deslop` | Strips AI slop from the code a branch added and simplifies it without changing behavior. |
+| `az-complexity-check` | Audits a finished change for unneeded additions, droppable assumptions, spread, and duplication. Reports; does not edit. |
+| `az-implementation-rehearsal` | Walks through a proposed change without writing it, finds the regressions and the prep refactor that makes it easy, and revises the plan. |
+| `az-devs-roundtable` | Five legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then converge. |
+| `az-tour` | Explores a subsystem and writes a self-contained HTML tour of it, optionally with an architecture critique. |
+| `az-setup-agent-workflow` | Sets a repository up for agent work: a reliable dev loop, concise AGENTS.md guidance, task skills, and one demonstrated change-and-verify loop. |
+| `az-verify-harness` | Gives a repo a verification harness agents actually use: a `control-<app>` driver and a user-POV feature map checked in CI. Based on Lauren Tan's ([@poteto](https://github.com/poteto)) verification skills in Cursor's pstack. |
+| `az-call-advisor` | Calls the premium Fable advisor through the Claude Code CLI for hard judgment and design critique, with resumable sessions. |
+| `az-call-worker` | Calls a fast Codex worker through the Codex CLI for bounded implementation, tests, and repo exploration. |
+| `az-master-coordinator` | Coordinates several Conductor workspaces from one session: a board of everything in flight, landing order from measured file overlap, a go or no-go on each frozen revision, and recovery of stalled handoffs. Starts only when you ask for it, never on its own. |
+| `az-workspace-coordinator` | Leads one change in one Conductor workspace through builder, reviewer, and checker sessions, with one writer per hunk and one evidence-backed handoff. Starts only when you or a master coordinator assign it. |
+| `az-skills-feedback` | The full guide for sending feedback, failed-task reports, and follow-ups to the az-skills team. |
+
+### Product & Design
+
+| Skill | What it does |
+|---|---|
+| `az-product-rehearsal` | Imagines a proposed feature has already shipped, walks a real user or agent through it, finds where it will be bad, and revises the proposal before anyone builds it. |
+| `az-design-roundtable` | Five legendary designers (Rams, Ive, Vignelli, Fukasawa, Jongerius) debate your brief in parallel, then converge. |
+
+### Marketing
+
+| Skill | What it does |
+|---|---|
+| `az-brand-name-explore` | Generates product and company names with five naming personas, based on David Placek's Lexicon method. |
+| `az-ai-answer-audit` | Traces an AI "best X" answer back to the searches, sources, and assumptions behind it. User-run and read-only. |
+| `az-geo-optimize` | Turns an `az-ai-answer-audit` into a prioritized plan to get a brand cited in AI answers. |
+
+### Productivity
+
+| Skill | What it does |
+|---|---|
+| `az-interview-me` | Interviews you about a plan, one question at a time, until the agent has the context to build the right thing. |
+| `az-noah-zender-it` | Ranks mental models from Noah Zender's idea library by leverage for your situation. |
+
+Some skills build on others. Each works alone, but installs better in pairs:
+
+- `az-product-rehearsal` decides what a feature should do; `az-implementation-rehearsal` rehearses how the code would change.
+- `az-geo-optimize` starts from an `az-ai-answer-audit` report.
+- `az-setup-agent-workflow` hands verification work to `az-verify-harness`.
+- `az-call-advisor` and `az-call-worker` are the judgment and implementation halves of one setup.
+- `az-greenlight-pr` answers `az-code-review` comments like any other reviewer's.
+- `az-master-coordinator` orders the work that `az-workspace-coordinator` leads in each workspace; a lead hands its PR to `az-greenlight-pr`.
+
+Requirements: `az-greenlight-pr` and `az-code-review` need an authenticated [GitHub CLI](https://cli.github.com); bundled scripts need `python3`; `az-call-advisor` needs the Claude Code CLI and `az-call-worker` the Codex CLI; the coordinators need Conductor.
 
 ## Install
 
-Use [Vercel's Skills CLI](https://github.com/vercel-labs/skills) to select skills and agents:
+Use [Vercel's Skills CLI](https://github.com/vercel-labs/skills) to pick skills and agents:
 
 ```bash
 npx skills add zvadaadam/az-skills
@@ -31,16 +85,16 @@ Install the whole collection globally for Claude Code and Codex:
 npx skills add zvadaadam/az-skills --skill '*' --agent claude-code codex --global
 ```
 
-Or list the available skills and install just one:
+Or list the skills and install just one:
 
 ```bash
 npx skills add zvadaadam/az-skills --list
-npx skills add zvadaadam/az-skills --skill deslop
+npx skills add zvadaadam/az-skills --skill az-deslop
 ```
 
-Each skill includes a standalone Hivenet feedback command. The optional `az-skills-feedback` skill adds detailed reporting guidance; it is included when you install the whole collection.
+Each skill ends with a standalone Hivenet feedback command. `az-skills-feedback` adds the detailed reporting guide; it comes with the whole collection.
 
-The Skills CLI installs from this public GitHub repository. The `skills/<category>/<name>/SKILL.md` layout is discovered automatically; no npm package or registry upload is needed. New installs use the default branch, so repository changes become available after they reach `master`. The [skills.sh listing](https://skills.sh/zvadaadam/az-skills) is driven by installations, as described in [Vercel's FAQ](https://skills.sh/docs/faq).
+The Skills CLI installs from this public GitHub repository. The `skills/<category>/<name>/SKILL.md` layout is discovered automatically; no npm package or registry upload is needed. New installs use the default branch, so changes become available after they reach `master`. The [skills.sh listing](https://skills.sh/zvadaadam/az-skills) is driven by installations, as described in [Vercel's FAQ](https://skills.sh/docs/faq).
 
 The Skills CLI has its own install-count telemetry. To disable it, prefix commands with `DISABLE_TELEMETRY=1`; see the [CLI documentation](https://skills.sh/docs/cli). Hivenet commands in this repo disable automatic context collection separately.
 
@@ -54,7 +108,7 @@ cd az-skills
 ./scripts/install.sh
 ```
 
-This links the skills into `~/.claude/skills`, `~/.agents/skills`, and `~/.codex/skills` and installs this repo's Git hooks for updates.
+This links the skills into `~/.claude/skills`, `~/.agents/skills`, and `~/.codex/skills`, removes links to skills the checkout no longer has, and installs this repo's Git hooks so pulls relink automatically.
 
 ## Update
 
@@ -70,6 +124,22 @@ For a linked local checkout, pull the latest:
 cd az-skills
 git pull
 ```
+
+### Renamed skills (November 2026)
+
+Every skill name gained the `az-` prefix: `greenlight-pr` is now `az-greenlight-pr`, `deslop` is now `az-deslop`, and so on. Five skills were removed: `plan-for-goal`, `plan-for-mega-goal`, and `repo-history-book` retired; `pre-factor`'s prep-refactor pass now lives in `az-implementation-rehearsal`, and `code-simplifier` merged into `az-deslop`.
+
+A linked checkout handles this on `git pull`. Skills CLI installs keep the old copies, so remove them and add the new names:
+
+```bash
+npx skills remove greenlight-pr code-review code-simplifier complexity-check deslop devs-roundtable \
+  implementation-rehearsal pre-factor repo-history-book setup-agent-workflow tour verify-harness \
+  call-advisor call-worker design-roundtable product-rehearsal ai-answer-audit brand-name-explore \
+  geo-optimize interview-me noah-zender-it plan-for-goal plan-for-mega-goal --global
+npx skills add zvadaadam/az-skills --skill '*' --global
+```
+
+Omit `--global` for project installs.
 
 ### Moving from the old installer
 
@@ -92,7 +162,7 @@ Omit `--global` if that old package was installed in a project. Then install the
 For Skills CLI installs, name the skill to remove:
 
 ```bash
-npx skills remove deslop --global
+npx skills remove az-deslop --global
 ```
 
 Omit `--global` for project installs. For a linked local checkout:
@@ -110,43 +180,3 @@ DO_NOT_TRACK=1 npx --yes hivenet@latest --to az-skills --dsn https://hv_pub_9f0d
 ```
 
 The [`az-skills-feedback` skill](skills/engineering/az-skills-feedback/SKILL.md) covers structured failed-task reports for the team's eval corpus, attachments, and follow-up questions and replies. The bundled publishable DSN fixes the destination to az-skills; no user-provided key is needed. These examples disable automatic context collection. Keep reports specific and never include secrets or private data.
-
----
-
-## What's inside
-
-### Engineering
-- **az-skills-feedback** — Hivenet support channel for skill feedback, structured failed-task reports, and replies from the az-skills team
-- **call-advisor** — Calls the premium Fable advisor through Claude Code CLI for hard judgment, architecture, and frontend/design critique, with resumable sessions and saved output artifacts
-- **call-worker** — Calls the fast Codex GPT-5.5 worker through Codex CLI for clean code implementation, repo exploration, tests, and bounded engineering tasks
-- **code-review** — Multi-lens code review with 3 parallel sub-agents (correctness, security, design) that validates and reports only high-signal findings
-- **devs-roundtable** — 5 legendary engineers (Carmack, Hickey, Metz, Torvalds, Beck) debate your problem in parallel, then build consensus
-- **code-simplifier** — Reviews code for clarity and maintainability, then cleans it up
-- **complexity-check** — Audits a change for unnecessary additions, assumptions, spread, and duplication
-- **deslop** — Detects and removes AI-generated code slop (unnecessary abstractions, over-engineering, verbose patterns)
-- **implementation-rehearsal** — Walks through a proposed implementation without changing code, challenges likely regressions, and revises the plan before building
-- **pre-factor** — Auto-fires before a feature or non-trivial change: maps the code the change will land in and surfaces the prep refactors that make the change easy (reshape the seam, add a safety net, kill duplication) — each one traced to the upcoming change, landed as its own commit first. The before-bookend to `complexity-check`
-- **repo-history-book** — Builds an evidence-backed account of how a project evolved from its commits, PRs, releases, and docs
-- **setup-agent-workflow** — Sets up a repository for effective AI agent work: learn the product, repair the development loop, encode recurring mistakes in code and checks, connect concise AGENTS.md guidance to task skills and feature knowledge, then demonstrate and maintain a complete change-and-verification loop. Reuses existing tools and adds only what the repository needs
-- **tour** — Explores a codebase subsystem and produces a self-contained HTML tour
-- **verify-harness** — Gives a repo a verification harness its agents actually use: a `control-<app>` driver CLI that runs the real app in an isolated session and drives it the way a person and an agent do, plus a user-POV feature map (what exists, how to reach it, a replayable recipe of `expect`s, what misleads) checked in CI for completeness. Covers setup, expanding the map with parallel mappers, verifying a change with proof, reproducing reports, and maintenance — with a "no silent scripts" gaps loop that turns every one-off probe into a driver command. Based on Lauren Tan's (@poteto) verification skills in Cursor's pstack
-
-### Design
-- **design-roundtable** — 5 legendary designers (Rams, Ive, Vignelli, Fukasawa, Jongerius) debate your brief in parallel, then build consensus
-
-### Marketing
-- **brand-name-explore** — Generates product/company names using multiple creative personas (Lexicon methodology, poet, linguist, culture hacker, futurist)
-- **ai-answer-audit** — Reverse-engineers an AI "best X" answer back to the searches, sources, and assumptions behind it: an evidence ledger, a model-layer vs content-layer split, the multi-hop search path, and which claims are unsupported model guesswork. User-run and read-only — it never alters the answer
-- **geo-optimize** — Turns an `ai-answer-audit` into a prioritized plan to get a brand cited in AI answers (ChatGPT, Perplexity, Google AI Overviews): authority gap, four levers (get-cited / fix-open-territory / open-a-lane / upgrade-evidence), per-engine moves, and a Fast Wins / Roadmap / Backlog roadmap
-
-### Product
-- **product-rehearsal** — Imagines a proposed feature has already shipped, walks a real user or agent through finding and using it, surfaces where it will be bad, and revises the proposal before building. The behavior-level sibling of `implementation-rehearsal`
-
-### DevOps
-- **greenlight-pr** — Takes a PR, fixes CI failures, addresses review comments, and iterates until everything passes
-
-### Productivity
-- **interview-me** — Interviews you about a plan or design until it has all the context to build the right thing
-- **noah-zender-it** — Selects relevant mental models from Noah Zender's idea library and explains how to apply them
-- **plan-for-goal** — Turns conversation context into a single prompt for a coding agent's `/goal` orchestration loop — directional outcome, quality bar, and a self-verification path the loop can iterate against
-- **plan-for-mega-goal** — Turns a multi-objective effort into a roadmap and a compact prompt for an autonomous goal loop
