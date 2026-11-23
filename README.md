@@ -44,8 +44,8 @@ Choose the skills and agents you use. Add `--skill az-deslop` to pick one by nam
 | `az-verify-harness` | Gives a repo a verification harness agents actually use: a `control-<app>` driver and a user-POV feature map checked in CI. Based on Lauren Tan's ([@poteto](https://github.com/poteto)) verification skills in Cursor's pstack. |
 | `az-call-advisor` | Calls the premium Fable advisor through the Claude Code CLI for hard judgment and design critique, with resumable sessions. |
 | `az-call-worker` | Calls a fast Codex worker through the Codex CLI for bounded implementation, tests, and repo exploration. |
-| `az-master-coordinator` | Coordinates several Conductor workspaces from one session: a board of everything in flight, landing order from measured file overlap, a go or no-go on each frozen revision, and recovery of stalled handoffs. Starts only when you ask for it, never on its own. |
-| `az-workspace-coordinator` | Leads one change in one Conductor workspace through builder, reviewer, and checker sessions, with one writer per hunk and one evidence-backed handoff. Starts only when you or a master coordinator assign it. |
+| `az-multi-workspace-lead` | Directs coordinators across several Conductor workspaces when you ask. Checks file overlap and interface dependencies, sets landing order, and recovers stalled handoffs. |
+| `az-workspace-coordinator` | Coordinates builder, reviewer, and checker sessions for one change in one Conductor workspace. Reports to you when you assign it directly, or to the multi-workspace lead when the lead assigns it. |
 | `az-skills-feedback` | The full guide for sending feedback, failed-task reports, and follow-ups to the az-skills team. |
 
 ### Product & Design
@@ -77,7 +77,7 @@ Some skills build on others. Each works alone, but installs better in pairs:
 - `az-setup-agent-workflow` hands verification work to `az-verify-harness`.
 - `az-call-advisor` and `az-call-worker` are the judgment and implementation halves of one setup.
 - `az-greenlight-pr` answers `az-code-review` comments like any other reviewer's.
-- `az-master-coordinator` orders the work that `az-workspace-coordinator` leads in each workspace; a lead hands its PR to `az-greenlight-pr`.
+- For one workspace, ask `az-workspace-coordinator` to take the change through review and verification. For several, ask `az-multi-workspace-lead` to coordinate their landings. Each workspace coordinator can use `az-greenlight-pr` for its PR.
 
 Requirements: `az-greenlight-pr` and `az-code-review` need an authenticated [GitHub CLI](https://cli.github.com); bundled scripts need `python3`; `az-call-advisor` needs the Claude Code CLI and `az-call-worker` the Codex CLI; the coordinators need Conductor.
 
@@ -99,6 +99,8 @@ npx skills remove az-deslop
 <summary>Renamed skills (November 2026)</summary>
 
 Most skills gained the `az-` prefix. For example, `deslop` is now `az-deslop`. `plan-for-goal`, `plan-for-mega-goal`, and `repo-history-book` were retired. The prep-refactor pass moved from `pre-factor` to `az-implementation-rehearsal`, and `code-simplifier` merged into `az-deslop`.
+
+`az-master-coordinator` was renamed to `az-multi-workspace-lead`. The single-workspace role keeps the name `az-workspace-coordinator`.
 
 Install the skills you want under their new names. Run `npx skills list` in the project or `npx skills list --global` for a global install. Remove an old name only if its listed source is `zvadaadam/az-skills`. For example, if that source owns the old project copy, run `npx skills remove deslop`. Add `--global` for a global copy.
 

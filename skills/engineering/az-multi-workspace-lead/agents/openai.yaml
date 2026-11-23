@@ -1,0 +1,4 @@
+interface:
+  display_name: "AZ · Multi-Workspace Lead"
+  short_description: "Lead workspace coordinators and order dependent changes"
+  default_prompt: "Use $az-multi-workspace-lead to coordinate these Conductor workspaces and decide which changes can land first."

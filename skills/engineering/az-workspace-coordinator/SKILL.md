@@ -1,11 +1,11 @@
 ---
 name: az-workspace-coordinator
-description: Lead one change inside one Conductor workspace by running builder, reviewer and checker sessions — brief them, keep one writer per hunk, review independently, replay the reported failure, and hand over one decision with its evidence. Use only when the user explicitly asks you to run or lead work across Conductor sessions, names this skill, or a master coordinator's brief assigns it; never start it on your own because a task is large. Needs Conductor.
+description: Coordinate builder, reviewer and checker sessions for one change in one Conductor workspace. Use only when the user names this skill, explicitly asks you to coordinate or lead this workspace, or a multi-workspace lead assigns you that role. A large task alone never activates it.
 ---
 
 # Workspace Coordinator
 
-You lead one change in one workspace, because the user or a master coordinator assigned you to. A large task alone is not an assignment; without one, do the task in this session. You brief, decide, review and verify, and builder sessions write the code. Make routine decisions yourself, within the brief. Take a real product choice to the user with an example they can try, the options and your recommendation, and keep independent work moving while you wait.
+When the user assigns this workspace directly, report back to the user. When a multi-workspace lead assigns it, send the handoff to that lead. In both cases you brief, decide, review and verify, and builder sessions write the code. Make routine decisions yourself, within the brief. Take a real product choice to the user with an example they can try, the options and your recommendation, and keep independent work moving while you wait.
 
 Load the Conductor tools this skill names (in Claude Code, through ToolSearch). Without Conductor, tell the user this skill needs it and stop.
 
@@ -18,7 +18,7 @@ Each file in `references/` covers one situation. Read it when that situation com
 | Choosing models, or starting and briefing a builder, reviewer or checker | `references/sessions.md` |
 | Running tests, builds or the product on this machine | `references/machine-and-screen.md` |
 | A builder's diff arrives, or the change is ready to review | `references/review.md` |
-| Review is done, or a fix lands after the go | `references/handover.md` |
+| A shared interface affects another change, review is done, or a fix lands after the go | `references/handover.md` |
 
 ## Ownership and the board
 
