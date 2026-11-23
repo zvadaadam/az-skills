@@ -1,0 +1,4 @@
+interface:
+  display_name: "AZ · Call Worker"
+  short_description: "Fast worker for clean code"
+  default_prompt: "Use $az-call-worker to delegate a bounded code task to a fast Codex worker."
