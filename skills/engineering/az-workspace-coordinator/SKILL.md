@@ -15,7 +15,7 @@ Each file in `references/` covers one situation. Read it when that situation com
 
 | Situation | Read |
 |---|---|
-| Choosing models, or starting and briefing a builder, reviewer or checker | `references/sessions.md` |
+| Choosing models, starting or briefing a builder, reviewer or checker, or setting a fallback wake | `references/sessions.md` |
 | Running tests, builds or the product on this machine | `references/machine-and-screen.md` |
 | A builder's diff arrives, or the change is ready to review | `references/review.md` |
 | Review is done, or a fix lands after the go | `references/handover.md` |
@@ -40,7 +40,7 @@ Whatever woke you, take the same steps:
 2. **Check every wait on the board** against the session behind it, using "A quiet session" below.
 3. **Decide and send.** Send every stop, correction, change of priority and go-ahead as a steer, `SendSessionMessage`'s default: a queued message can arrive after the worker has already built the old instruction. When a message replaces an earlier one, say which. Queue only notes that stay true. Before asking for a redo, check what the worker already changed and ran.
 4. **Confirm each go-ahead started a turn.** Within a minute, the worker's `lastMessageAt` (from `GetSessions`) must move past your send. A `running` reply proves nothing: a dead session accepts messages and never runs.
-5. **Update the board and end your turn.** The worker's message wakes you. Use `WaitForSessions` only for a wait of a minute or two, and never a sleep loop.
+5. **Update the board and end your turn.** The worker's message wakes you. Use `WaitForSessions` only for a wait of a minute or two, and never a sleep loop. If no master coordinates you, also keep a fallback wake (`references/sessions.md`): a usage limit can stop you mid-wait, and then nothing resumes you.
 
 ## A quiet session
 
@@ -51,7 +51,8 @@ Did it take a turn after your last message? (its lastMessageAt is later than you
 ├── No → resend once. Still no turn a minute later → replace it.
 └── Yes → how did its last turn end?
     ├── Asking the user something → take the question to the user.
-    ├── In an error or a usage limit → it can't act until it's back.
+    ├── Stopped by a usage limit → put its reset time on the board; at the reset, steer it to continue.
+    ├── Stopped by an error → steer it to continue once. Still failing → replace it.
     ├── Cut off inside a step with no report (a crash, a relaunch) → it will never report.
     │     Delivery brief: have that same worker resume at that step; its transcript and tree hold the partial work.
     │     Audit-only brief: report it and change nothing.
