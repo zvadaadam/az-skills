@@ -7,3 +7,5 @@
 **Reviewer**: independent and read-only. It reads the frozen diff, not the conversation that produced it.
 
 **Checker**: drives the real product on the candidate build and replays the reported failure. Passing tests are not proof: in one run all 12 checks passed while 15 cards were visibly clipped. Its brief says how to launch the product without taking the user's screen (`machine-and-screen.md`), and its report says how it launched.
+
+**The fallback wake.** If no master coordinates you, keep one recurring wake about every 45 minutes while work is in flight: a usage limit can stop you mid-wait, and then no worker's message starts your next turn. In Claude Code, create it with `CronCreate` at a minute that isn't :00 or :30, with the prompt "Run Each turn". It lives only in this session: recreate it after a relaunch, and delete it with `CronDelete` when the work is done. Under a master, the master's wake resumes you.

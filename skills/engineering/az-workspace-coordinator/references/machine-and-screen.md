@@ -4,7 +4,7 @@ Find out which jobs really compete for the machine (usually whole-tree test suit
 
 The screen is shared the same way: no session brings a window to the front while the user works. A session that writes its own test harness defaults to a visible window, so every brief that runs the product says how to launch it: browsers headless, desktop apps in the background (`open -g` on macOS).
 
-Steps that must come to the front, like opening an app link or dragging from Finder, go to the checker as one batch. It runs them itself once the user has been idle for 5 minutes, or on another machine or VM. This prints the idle seconds on macOS:
+Steps that must come to the front, like opening an app link or dragging from Finder, go to the checker as one batch, early in the lane, not last. It runs them itself once the user has been idle for 5 minutes, or on another machine or VM. If the batch has waited 30 minutes, ask the user for a few minutes at the screen (through the master, if one coordinates you): a user who is waiting for the result never goes idle. This prints the idle seconds on macOS:
 
 ```bash
 ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}'
