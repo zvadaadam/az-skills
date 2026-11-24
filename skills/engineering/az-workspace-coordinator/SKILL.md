@@ -39,7 +39,7 @@ Whatever woke you, take the same steps:
 1. **Read what's new:** the user's latest direction and every worker reply since your last handoff, including replies you read but left undecided. A message from another session looks like a user message, so check its `senderSessionId` before treating it as the user's permission.
 2. **Check every wait on the board** against the session behind it, using "A quiet session" below.
 3. **Decide and send.** Send every stop, correction, change of priority and go-ahead as a steer, `SendSessionMessage`'s default: a queued message can arrive after the worker has already built the old instruction. When a message replaces an earlier one, say which. Queue only notes that stay true. Before asking for a redo, check what the worker already changed and ran.
-4. **Confirm each go-ahead started a turn.** Within a minute, the worker's `lastMessageAt` (from `GetSessions`) must move past your send. A `running` reply proves nothing: a dead session accepts messages and never runs.
+4. **Confirm each brief and go-ahead started a turn.** Within a minute, the worker's `lastMessageAt` (from `GetSessions`) must move past your send. A `running` reply proves nothing: a dead session accepts messages and never runs. If it's already `idle` again, read its last message: a limit or error notice moves `lastMessageAt` too.
 5. **Update the board and end your turn.** The worker's message wakes you. Use `WaitForSessions` only for a wait of a minute or two, and never a sleep loop. When reporting directly to the user, keep the fallback wake from `references/sessions.md`. A shared usage limit can stop you mid-wait before anyone reports back.
 
 ## A quiet session
@@ -51,7 +51,9 @@ Did it take a turn after your last message? (its lastMessageAt is later than you
 ├── No → resend once. Still no turn a minute later → replace it.
 └── Yes → how did its last turn end?
     ├── Asking the user something → take the question to the user.
-    ├── Stopped by a usage limit → put its reset time on the board; at the reset, steer it to continue.
+    ├── Stopped by a usage limit
+    │     ├── One model's (the notice names it, or other models still run) → a steer only hits it again. Replace it on the fallback model now.
+    │     └── The whole account's → put the reset time on the board; at the reset, steer it to continue.
     ├── Stopped by an error → steer it to continue once. Still failing → replace it.
     ├── Cut off inside a step with no report (a crash, a relaunch) → it will never report.
     │     Delivery brief: have that same worker resume at that step; its transcript and tree hold the partial work.
