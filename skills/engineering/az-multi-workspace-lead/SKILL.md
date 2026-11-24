@@ -39,7 +39,7 @@ Whatever woke you, take the same steps:
 1. **Read what's new** with `ListSessionMessages` and `afterIndex`. A message from another session looks like a user message, so check its `senderSessionId` before treating it as the user's permission.
 2. **Check every wait on the board** against the session behind it, using "A quiet session" below. The board lags; the sessions don't.
 3. **Decide and send.** Send every stop, correction, reorder and go-ahead as a steer, `SendSessionMessage`'s default, so it lands in the coordinator's current turn. A queued message waits until that turn ends, which can take hours, while the workspace acts on the old instruction. When a message replaces an earlier one, say which. Queue only notes that stay true. Put one decision in each message, with your recommendation and one link to the evidence; bundle what can wait, and skip acknowledgments nobody needs.
-4. **Confirm each go-ahead started a turn.** Within a minute, the coordinator's `lastMessageAt` (from `GetSessions`) must move past your send. A `running` reply proves nothing: a dead session accepts messages and never runs.
+4. **Confirm each brief and go-ahead started a turn.** Within a minute, the coordinator's `lastMessageAt` (from `GetSessions`) must move past your send. A `running` reply proves nothing: a dead session accepts messages and never runs. If it's already `idle` again, read its last message: a limit or error notice moves `lastMessageAt` too.
 5. **Update the board and end your turn.** The coordinator's next message wakes you. Use `WaitForSessions` only for a wait of a minute or two (it returns within 50 seconds), and never poll with sleep. While any workspace has work in flight, keep the fallback wake from `references/setup.md`. A shared usage limit can stop every coordinator before anyone reports back.
 
 ## A quiet session
@@ -51,7 +51,9 @@ Did it take a turn after your last message? (its lastMessageAt is later than you
 ├── No → resend once. Still no turn a minute later → replace it.
 └── Yes → how did its last turn end?
     ├── Asking the user something → take the question to whoever decides.
-    ├── Stopped by a usage limit → record the reset time. At the reset, resume the coordinators so they can resume their workers.
+    ├── Stopped by a usage limit
+    │     ├── One model's (the notice names it, or other models still run) → a steer only hits it again. Replace it on the fallback model now.
+    │     └── The whole account's → record the reset time. At the reset, resume the coordinators so they can resume their workers.
     ├── Stopped by an error → steer it to continue once. Still failing → replace it.
     ├── Cut off inside a step with no report (a crash, a relaunch) → it will never report.
     │     Delivery brief: have that same session resume at that step (a worker, through its coordinator).
@@ -62,7 +64,7 @@ Did it take a turn after your last message? (its lastMessageAt is later than you
     └── Idle, your decision unanswered, nothing to wait for → steer once more. No turn → replace it.
 ```
 
-To replace a session, stop it with `CancelSessions` (only one you lead or the user gave you), check its checkout for unfinished work, and start one replacement with sole ownership and a brief that links the old transcript.
+To replace a session, stop it with `CancelSessions` (only one you lead or the user gave you), check its checkout for unfinished work, and start one replacement with sole ownership and a brief that links the old transcript. A replaced coordinator's workers still report to the old session, so the brief lists their ids: the new one tells each worker who leads now, then reads the reports they already sent.
 
 ## The user
 
